@@ -265,28 +265,84 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 }
 </style>
 
+
+<style>
+/* 花森島身份登入 */
+.identity-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.identity-option{
+  border:1px solid var(--line);background:#fff;border-radius:14px;padding:13px 12px;
+  text-align:left;color:var(--deep);transition:.15s
+}
+.identity-option:hover{background:var(--mint);border-color:var(--sage)}
+.identity-option.selected{
+  background:var(--forest);color:#fff;border-color:var(--forest);
+  box-shadow:0 7px 18px rgba(49,89,72,.18)
+}
+.identity-option b{display:block;font-size:16px}
+.identity-option small{display:block;margin-top:3px;opacity:.72}
+.login-brand-mark{
+  width:54px;height:54px;border-radius:18px;background:var(--mint);display:grid;place-items:center;
+  font-size:28px;margin-bottom:12px
+}
+.login-password-wrap{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px}
+.login-password-wrap input{margin:0}
+.login-help{margin-top:12px;padding:10px 12px;background:#f8f5ef;border-radius:10px;font-size:12px;color:var(--muted)}
+.current-user-card{
+  margin:18px 0;background:rgba(255,255,255,.10);padding:12px;border-radius:14px
+}
+.current-user-card strong{display:block}
+.current-user-card small{display:block;opacity:.72;margin-top:3px}
+@media(max-width:520px){.identity-grid{grid-template-columns:1fr}}
+</style>
+
 </head>
 <body>
 
+
 <section id="loginView" class="login">
   <div class="login-card">
-    <h1>花森島 Project Hub</h1>
-    <p>登入後，四位夥伴會看到同一份即時進度。</p>
-    <input id="loginEmail" type="email" placeholder="Email">
-    <input id="loginPassword" type="password" placeholder="密碼">
-    <button class="btn primary" style="width:100%;margin-top:8px" onclick="signIn()">登入</button>
-    <button class="btn soft" style="width:100%;margin-top:8px" onclick="signUp()">建立帳號</button>
+    <div class="login-brand-mark">🌿</div>
+    <h1>花森島登入</h1>
+    <p>請選擇你的身份，再輸入個人密碼。</p>
+
+    <div class="identity-grid" id="identityGrid">
+      <button type="button" class="identity-option" data-identity="maomao" onclick="selectIdentity('maomao')">
+        <b>maomao</b><small>滴滴兒森</small>
+      </button>
+      <button type="button" class="identity-option" data-identity="xiaomei" onclick="selectIdentity('xiaomei')">
+        <b>小美</b><small>小花果玩戲場</small>
+      </button>
+      <button type="button" class="identity-option" data-identity="ruoc" onclick="selectIdentity('ruoc')">
+        <b>若C</b><small>物物島</small>
+      </button>
+      <button type="button" class="identity-option" data-identity="bonnie" onclick="selectIdentity('bonnie')">
+        <b>邦尼</b><small>專案經理</small>
+      </button>
+    </div>
+
+    <input id="selectedIdentity" type="hidden">
+    <div class="login-password-wrap">
+      <input id="loginPassword" type="password" placeholder="請輸入密碼" onkeydown="if(event.key==='Enter')signIn()">
+      <button type="button" class="btn soft" onclick="toggleLoginPassword()">顯示</button>
+    </div>
+
+    <button type="button" class="btn primary" style="width:100%;margin-top:10px" onclick="signIn()">登入</button>
     <div id="loginMsg" class="muted" style="margin-top:10px"></div>
+    <div class="login-help">每位夥伴使用自己的身份登入，系統才能記錄建立者與最後修改者。</div>
   </div>
 </section>
 
 <div id="appView" class="app hidden">
 <aside class="sidebar">
   <div class="logo">花森島<br>Project Hub<small>《好好吃頓飯》多人協作版</small></div>
+  <div class="current-user-card">
+    <strong id="userLabel">登入中</strong>
+    <small id="userTeamLabel"></small>
+    <button type="button" class="btn soft" style="width:100%;margin-top:9px" onclick="signOut()">登出</button>
+  </div>
   <div class="persona">
-    <small id="userLabel">登入中</small>
+    <small>工作檢視</small>
     <select id="persona" onchange="renderAll()"><option value="all">全案總覽</option></select>
-    <button class="btn soft" style="width:100%;margin-top:8px" onclick="signOut()">登出</button>
   </div>
   <nav>
     <button class="active" data-view="dashboard">今天與接下來</button>
@@ -488,6 +544,9 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
     <label><span>子分類</span><input id="tSubcategory"></label>
     <label class="full"><span>備註</span><textarea id="tNotes"></textarea></label>
   </div>
+  
+  <div id="taskAttribution" class="muted" style="margin-top:14px;padding:10px 12px;background:#f8f5ef;border-radius:10px;display:none"></div>
+
   <div class="drawer-actions"><button id="taskDeleteBtn" class="btn danger hidden" onclick="deleteTask()">刪除</button><button class="btn primary" onclick="saveTask()">儲存工作</button></div>
 </aside>
 
@@ -499,7 +558,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 
 <script>
 let sb, currentUser, currentProfile;
-let tasks=[], meetings=[], summaries=[], meetingActions=[];
+let tasks=[], meetings=[], summaries=[], meetingActions=[], profiles=[];
 let meetingDirty=false, removedMeetingIds=[], removedActionIds=[];
 const MEETING_DRAFT_PREFIX='huasendao_meeting_draft_';
 
@@ -519,36 +578,124 @@ async function boot(){
   if(session) await enterApp(session.user);
   sb.auth.onAuthStateChange(async(_,session)=>{if(session)await enterApp(session.user);else showLogin()});
 }
+
+const IDENTITY_CONFIG={
+  maomao:{
+    displayName:'maomao',
+    email:'maomao@huasendao.app',
+    role:'lead',
+    team:'滴滴兒森'
+  },
+  xiaomei:{
+    displayName:'小美',
+    email:'beauty@huasendao.app',
+    role:'lead',
+    team:'小花果玩戲場'
+  },
+  ruoc:{
+    displayName:'若C',
+    email:'wuwu@huasendao.app',
+    role:'lead',
+    team:'物物島'
+  },
+  bonnie:{
+    displayName:'邦尼',
+    email:'bunny@huasendao.app',
+    role:'pm',
+    team:'專案管理'
+  }
+};
+let selectedIdentityKey=localStorage.getItem('huasendao_identity')||'';
+
+function selectIdentity(key){
+  selectedIdentityKey=key;
+  localStorage.setItem('huasendao_identity',key);
+  $('selectedIdentity').value=key;
+  document.querySelectorAll('.identity-option').forEach(btn=>{
+    btn.classList.toggle('selected',btn.dataset.identity===key);
+  });
+  $('loginPassword').focus();
+}
+function toggleLoginPassword(){
+  const field=$('loginPassword');
+  field.type=field.type==='password'?'text':'password';
+}
+function initIdentityLogin(){
+  if(selectedIdentityKey&&IDENTITY_CONFIG[selectedIdentityKey]){
+    selectIdentity(selectedIdentityKey);
+  }
+}
 async function signIn(){
+  const key=$('selectedIdentity').value||selectedIdentityKey;
+  const password=$('loginPassword').value;
+  if(!key||!IDENTITY_CONFIG[key]){
+    $('loginMsg').textContent='請先選擇你的身份。';
+    return;
+  }
+  if(!password){
+    $('loginMsg').textContent='請輸入密碼。';
+    return;
+  }
   $('loginMsg').textContent='登入中…';
-  const {error}=await sb.auth.signInWithPassword({email:$('loginEmail').value,password:$('loginPassword').value});
-  $('loginMsg').textContent=error?error.message:'';
+  const config=IDENTITY_CONFIG[key];
+  const {error}=await sb.auth.signInWithPassword({email:config.email,password});
+  if(error){
+    $('loginMsg').textContent='登入失敗，請確認身份與密碼是否正確。';
+    return;
+  }
+  $('loginPassword').value='';
+  $('loginMsg').textContent='';
 }
-async function signUp(){
-  const email=$('loginEmail').value,password=$('loginPassword').value;
-  const displayName=prompt('顯示名稱（例如：邦妮、maomao、小花果、物物島）');
-  const {error}=await sb.auth.signUp({email,password,options:{data:{display_name:displayName||email.split('@')[0]}}});
-  $('loginMsg').textContent=error?error.message:'帳號已建立，請依 Supabase 設定完成信箱驗證後登入。';
+async function signOut(){
+  await sb.auth.signOut();
 }
-async function signOut(){await sb.auth.signOut()}
-function showLogin(){$('loginView').classList.remove('hidden');$('appView').classList.add('hidden')}
+function showLogin(){
+  $('loginView').classList.remove('hidden');
+  $('appView').classList.add('hidden');
+  initIdentityLogin();
+}
+async function syncOwnProfile(user){
+  const config=Object.values(IDENTITY_CONFIG).find(x=>x.email===user.email);
+  if(!config)return null;
+  const payload={
+    id:user.id,
+    display_name:config.displayName,
+    role:config.role,
+    team:config.team
+  };
+  const {data,error}=await sb.from('profiles').upsert(payload).select().single();
+  if(error){
+    console.warn('profile sync failed',error);
+    return null;
+  }
+  return data;
+}
 async function enterApp(user){
   currentUser=user;
-  const {data}=await sb.from('profiles').select('*').eq('id',user.id).single();
-  currentProfile=data;
-  $('userLabel').textContent=(data?.display_name||user.email)+'｜'+(data?.role||'member');
-  $('loginView').classList.add('hidden');$('appView').classList.remove('hidden');
-  await loadAll(); subscribeRealtime();
+  let profile=await syncOwnProfile(user);
+  if(!profile){
+    const {data}=await sb.from('profiles').select('*').eq('id',user.id).single();
+    profile=data;
+  }
+  currentProfile=profile;
+  const identity=Object.values(IDENTITY_CONFIG).find(x=>x.email===user.email);
+  $('userLabel').textContent=identity?.displayName||profile?.display_name||user.email;
+  $('userTeamLabel').textContent=identity?.team||profile?.team||'';
+  $('loginView').classList.add('hidden');
+  $('appView').classList.remove('hidden');
+  await loadAll();
+  subscribeRealtime();
 }
 
 async function loadAll(){
-  const [{data:t},{data:m},{data:s},{data:a}]=await Promise.all([
+  const [{data:t},{data:m},{data:s},{data:a},{data:p}]=await Promise.all([
     sb.from('tasks').select('*').order('due_date',{ascending:true}),
     sb.from('meetings').select('*').order('week_start',{ascending:false}).order('sort_order',{ascending:true}),
     sb.from('meeting_summaries').select('*'),
-    sb.from('meeting_action_items').select('*').order('created_at',{ascending:true})
+    sb.from('meeting_action_items').select('*').order('created_at',{ascending:true}),
+    sb.from('profiles').select('*')
   ]);
-  tasks=t||[];meetings=m||[];summaries=s||[];meetingActions=a||[];
+  tasks=t||[];meetings=m||[];summaries=s||[];meetingActions=a||[];profiles=p||[];
   fillPersona();renderAll();
 }
 function handleRealtimeUpdate(){
@@ -578,6 +725,10 @@ function fillPersona(){
   $('persona').innerHTML='<option value="all">全案總覽</option>'+owners.map(x=>`<option>${esc(x)}</option>`).join('');
   $('timelineOwner').innerHTML='<option value="">所有負責人</option>'+owners.map(x=>`<option>${esc(x)}</option>`).join('');
   const teams=[...new Set(tasks.map(t=>t.team).filter(Boolean))];
+  const identity=Object.values(IDENTITY_CONFIG).find(x=>x.email===currentUser?.email);
+  if(identity && [...$('persona').options].some(o=>o.value===identity.displayName)){
+    $('persona').value=identity.displayName;
+  }
   $('timelineTeam').innerHTML='<option value="">所有團隊</option>'+teams.map(x=>`<option>${esc(x)}</option>`).join('');
 }
 function visibleTasks(){const p=$('persona').value;return p==='all'?tasks:tasks.filter(t=>t.owner_name===p)}
@@ -1174,9 +1325,28 @@ function renderPM(){
 }
 
 function openDrawer(id){$('backdrop').classList.add('open');$(id).classList.add('open')}function closeDrawers(){$('backdrop').classList.remove('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'))}
+
+function profileName(id){
+  return profiles.find(p=>p.id===id)?.display_name||'未知成員';
+}
+function renderTaskAttribution(task){
+  const box=$('taskAttribution');
+  if(!box)return;
+  if(!task){
+    box.style.display='none';
+    box.innerHTML='';
+    return;
+  }
+  const created=task.created_by?profileName(task.created_by):'未記錄';
+  const updated=task.updated_by?profileName(task.updated_by):'未記錄';
+  const updatedAt=task.updated_at?new Date(task.updated_at).toLocaleString('zh-TW'):'';
+  box.style.display='block';
+  box.innerHTML=`建立者：${esc(created)}　｜　最後修改：${esc(updated)}${updatedAt?'・'+esc(updatedAt):''}`;
+}
+
 function openTaskDrawer(id=''){
   const t=id?tasks.find(x=>x.id===id):null;const set=(i,v='')=>$(i).value=v??'';
-  $('taskDrawerTitle').textContent=t?'編輯工作':'新增工作';set('tDbId',t?.id);set('tCode',t?.code);set('tName',t?.title);set('tOwner',t?.owner_name);set('tTeam',t?.team||'三方共同');set('tStart',fmt(t?.start_date)||new Date().toISOString().slice(0,10));set('tEnd',fmt(t?.due_date));set('tStatus',t?.status||'未開始');set('tPriority',t?.priority||'中');set('tProgress',t?.progress||0);set('tCategory',t?.category);set('tSubcategory',t?.subcategory);set('tNotes',t?.notes);$('taskDeleteBtn').classList.toggle('hidden',!t);openDrawer('taskDrawer');
+  $('taskDrawerTitle').textContent=t?'編輯工作':'新增工作';set('tDbId',t?.id);set('tCode',t?.code);set('tName',t?.title);set('tOwner',t?.owner_name);set('tTeam',t?.team||'三方共同');set('tStart',fmt(t?.start_date)||new Date().toISOString().slice(0,10));set('tEnd',fmt(t?.due_date));set('tStatus',t?.status||'未開始');set('tPriority',t?.priority||'中');set('tProgress',t?.progress||0);set('tCategory',t?.category);set('tSubcategory',t?.subcategory);set('tNotes',t?.notes);$('taskDeleteBtn').classList.toggle('hidden',!t);renderTaskAttribution(t);openDrawer('taskDrawer');
 }
 function nextCode(team){const p=team==='滴滴兒森'?'DD':team==='小花果玩戲場'?'XH':team==='物物島'?'WW':team==='專案管理'?'PM':'ALL';const nums=tasks.filter(t=>t.code?.startsWith(p+'-')).map(t=>parseInt(t.code.split('-')[1])||0);return p+'-'+String((nums.length?Math.max(...nums):0)+1).padStart(3,'0')}
 async function saveTask(){
@@ -1190,6 +1360,7 @@ async function deleteTask(){const id=$('tDbId').value;if(id&&confirm('確定刪�
 async function quickComplete(id,checked){await sb.from('tasks').update({status:checked?'已完成':'進行中',progress:checked?100:50,updated_by:currentUser.id}).eq('id',id)}
 
 $('meetingWeek').value=monday();
+initIdentityLogin();
 boot();
 </script>
 </body>
