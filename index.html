@@ -123,7 +123,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 
 <style>
 /* 迷你會議月曆 */
-.meeting-title-area{display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
+.meeting-title-area{display:block}
 .compact-calendar-wrap{
   width:250px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:9px 10px;
   box-shadow:0 4px 12px rgba(36,65,52,.05)
@@ -213,6 +213,68 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 }
 </style>
 
+
+<style>
+/* Dashboard weekly layout */
+.weekly-owner-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.week-owner-card{border:1px solid var(--line);border-radius:15px;background:#fff;overflow:hidden}
+.week-owner-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 13px;background:#f8f5ef;border-bottom:1px solid var(--line)
+}
+.week-owner-head b{color:var(--deep);font-size:17px}
+.week-task-list{padding:0 12px}
+.week-task-item{
+  padding:10px 0;border-bottom:1px solid #eee8df
+}
+.week-task-item:last-child{border-bottom:0}
+.week-task-item button{
+  border:0;background:transparent;text-align:left;padding:0;color:inherit;width:100%
+}
+.week-task-item button:hover b{text-decoration:underline;color:var(--forest)}
+.week-task-item .meta{font-size:12px;color:var(--muted);margin-top:3px}
+.week-empty{padding:16px;color:var(--muted);font-size:12px}
+
+/* Compact meeting layout */
+.compact-meeting-toolbar{
+  padding:8px 0 10px;
+}
+.meeting-toolbar-main{
+  display:grid;
+  grid-template-columns:minmax(260px,1fr) 250px auto;
+  gap:16px;
+  align-items:start;
+}
+.meeting-title-block h1{margin:0}
+.meeting-toolbar-actions{
+  display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap
+}
+.meeting-toolbar-secondary{
+  display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap
+}
+.meeting-toolbar-secondary label{display:flex;align-items:center;gap:7px}
+.compact-meeting-meta{
+  margin-top:10px;
+  grid-template-columns:2fr 1fr 1fr 1.3fr;
+  padding:12px;
+}
+.compact-meeting-meta textarea{min-height:38px}
+.compact-calendar-wrap{
+  width:250px;
+  margin:0;
+}
+@media(max-width:1050px){
+  .weekly-owner-board{grid-template-columns:1fr}
+  .meeting-toolbar-main{grid-template-columns:1fr 250px}
+  .meeting-toolbar-actions{grid-column:1/-1;justify-content:flex-start}
+}
+@media(max-width:720px){
+  .meeting-toolbar-main{grid-template-columns:1fr}
+  .compact-calendar-wrap{width:100%;max-width:280px}
+  .compact-meeting-meta{grid-template-columns:1fr 1fr}
+}
+</style>
+
 </head>
 <body>
 
@@ -245,43 +307,43 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 </aside>
 <main>
 
+
 <section id="dashboard" class="view active">
   <div class="topbar">
     <div>
       <h1>今天與接下來</h1>
-      <div class="muted">即時同步大家的進度與內容。</div>
+      <div class="muted">依小美、maomao、若C整理這週與下週的任務，點任務即可查看完整內容。</div>
     </div>
     <button class="btn primary" onclick="openTaskDrawer()">＋新增工作</button>
   </div>
 
   <div class="grid kpis">
     <div class="card kpi"><strong id="kToday">0</strong><span>今天到期</span></div>
-    <div class="card kpi"><strong id="kWeek">0</strong><span>7 天內到期</span></div>
+    <div class="card kpi"><strong id="kThisWeek">0</strong><span>本週到期</span></div>
+    <div class="card kpi"><strong id="kNextWeek">0</strong><span>下週到期</span></div>
     <div class="card kpi"><strong id="kOverdue">0</strong><span>逾期未完成</span></div>
-    <div class="card kpi"><strong id="kPending">0</strong><span>等待確認</span></div>
     <div class="card kpi"><strong id="kDays">0</strong><span>距離活動日</span></div>
   </div>
 
   <div class="card" style="margin-top:14px">
     <div class="section-head">
       <div>
-        <h3 style="margin:0">每個人的任務總表</h3>
-        <div class="muted">打勾即完成</div>
+        <h3 style="margin:0">本週任務內容</h3>
+        <div class="muted">只顯示本週需要推進的工作</div>
       </div>
-      <span class="muted">依截止日排序</span>
+      <button class="btn soft" onclick="document.querySelector('[data-view=timeline]').click()">查看任務時程總表</button>
     </div>
-    <div id="nextTasksByOwner" class="owner-task-board"></div>
+    <div id="thisWeekOwnerTasks" class="weekly-owner-board"></div>
   </div>
 
   <div class="card" style="margin-top:14px">
     <div class="section-head">
       <div>
-        <h3 style="margin:0">還沒做的工作</h3>
-        <div class="muted">依負責人分類，快速查看尚未開始的工作</div>
+        <h3 style="margin:0">下週該做的事</h3>
+        <div class="muted">提早看到下一週要開始或要完成的任務</div>
       </div>
-      <button class="btn soft" onclick="document.querySelector('[data-view=timeline]').click()">查看任務時程總表</button>
     </div>
-    <div id="notStartedByOwner" class="owner-task-board"></div>
+    <div id="nextWeekOwnerTasks" class="weekly-owner-board"></div>
   </div>
 </section>
 
@@ -309,40 +371,37 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 
 <section id="meeting" class="view">
   <div class="meeting-page">
-    <div class="meeting-stickybar">
-      <div class="topbar">
-        <div class="meeting-title-area">
-          <div>
-            <h1>會議記錄</h1>
-            <div class="muted">需要執行的待辦可同步進任務時程總表</div>
-          </div>
-          
-<div class="compact-calendar-wrap">
-  <div class="compact-calendar-head">
-    <button type="button" class="mini-nav" onclick="changeMeetingCalendarMonth(-1)">‹</button>
-    <div id="meetingCalendarTitle" class="compact-calendar-title"></div>
-    <button type="button" class="mini-nav" onclick="changeMeetingCalendarMonth(1)">›</button>
-  </div>
-  <div class="compact-calendar-grid" id="meetingCalendar"></div>
-</div>
-
-        </div>
-        <div>
-          <span id="meetingSaveState" class="save-state saved">已同步</span>
-          <button type="button" class="btn soft" onclick="addMeetingSection()">＋新增大項</button>
-          <button type="button" class="btn primary" onclick="saveWholeMeeting()">儲存全部並同步</button>
-        </div>
-      </div>
-
-      <div class="filters">
-        <label>選擇會議週 <input type="date" id="meetingWeek" onchange="changeMeetingWeek()"></label>
-        
-        <button type="button" class="btn soft" onclick="refreshMeetingSafely()">重新載入</button>
-      </div>
+    
+<div class="meeting-stickybar compact-meeting-toolbar">
+  <div class="meeting-toolbar-main">
+    <div class="meeting-title-block">
+      <h1>會議記錄</h1>
+      <div class="muted">需要執行的待辦可同步進任務時程總表</div>
     </div>
 
-    
-<div class="meeting-meta">
+    <div class="compact-calendar-wrap">
+      <div class="compact-calendar-head">
+        <button type="button" class="mini-nav" onclick="changeMeetingCalendarMonth(-1)">‹</button>
+        <div id="meetingCalendarTitle" class="compact-calendar-title"></div>
+        <button type="button" class="mini-nav" onclick="changeMeetingCalendarMonth(1)">›</button>
+      </div>
+      <div class="compact-calendar-grid" id="meetingCalendar"></div>
+    </div>
+
+    <div class="meeting-toolbar-actions">
+      <span id="meetingSaveState" class="save-state saved">已同步</span>
+      <button type="button" class="btn soft" onclick="addMeetingSection()">＋新增大項</button>
+      <button type="button" class="btn primary" onclick="saveWholeMeeting()">儲存全部並同步</button>
+    </div>
+  </div>
+
+  <div class="meeting-toolbar-secondary">
+    <label>選擇會議週 <input type="date" id="meetingWeek" onchange="changeMeetingWeek()"></label>
+    <button type="button" class="btn soft" onclick="refreshMeetingSafely()">重新載入</button>
+  </div>
+</div>
+
+<div class="meeting-meta compact-meeting-meta">
       <label class="wide"><span>會議主題</span><input id="meetingTitle" placeholder="例如：整體活動討論分享" oninput="markMeetingDirty()"></label>
       <label><span>會議日期</span><input type="date" id="meetingDate" oninput="markMeetingDirty()"></label>
       <label><span>會議時間</span><input type="time" id="meetingTime" oninput="markMeetingDirty()"></label>
@@ -561,25 +620,59 @@ function ownerTaskGroupHtml(owner,items,showCheckbox=true){
     }</div>
   </div>`;
 }
+
+function weekBounds(reference=new Date()){
+  const today=new Date(reference);today.setHours(0,0,0,0);
+  const day=today.getDay()||7;
+  const thisStart=new Date(today);thisStart.setDate(today.getDate()-day+1);
+  const thisEnd=new Date(thisStart);thisEnd.setDate(thisStart.getDate()+6);thisEnd.setHours(23,59,59,999);
+  const nextStart=new Date(thisStart);nextStart.setDate(thisStart.getDate()+7);
+  const nextEnd=new Date(nextStart);nextEnd.setDate(nextStart.getDate()+6);nextEnd.setHours(23,59,59,999);
+  return {today,thisStart,thisEnd,nextStart,nextEnd};
+}
+function dashboardOwnerOrder(){
+  return ['小美','maomao','若C'];
+}
+function dashboardTaskDate(t){
+  return dateObj(t.due_date)||dateObj(t.start_date);
+}
+function ownerWeekCard(owner,items){
+  const sorted=items.slice().sort((a,b)=>(dashboardTaskDate(a)||new Date('2099-01-01'))-(dashboardTaskDate(b)||new Date('2099-01-01')));
+  return `<div class="week-owner-card">
+    <div class="week-owner-head"><b>${esc(owner)}</b><span class="muted">${sorted.length} 件</span></div>
+    <div class="week-task-list">${
+      sorted.length?sorted.map(t=>`<div class="week-task-item">
+        <button onclick="openTaskDrawer('${t.id}')">
+          <b>${esc(t.title)}</b>
+          <div class="meta">${fmt(t.due_date)||fmt(t.start_date)||'未設定日期'}｜${esc(t.priority)}｜${esc(t.status)}</div>
+        </button>
+      </div>`).join(''):'<div class="week-empty">本週沒有任務</div>'
+    }</div>
+  </div>`;
+}
 function renderDashboard(){
-  const list=visibleTasks(),now=new Date();now.setHours(0,0,0,0);const in7=new Date(now);in7.setDate(now.getDate()+7);
+  const list=visibleTasks(),{today,thisStart,thisEnd,nextStart,nextEnd}=weekBounds();
   const open=list.filter(t=>t.status!=='已完成');
-  const today=open.filter(t=>dateObj(t.due_date)?.getTime()===now.getTime());
-  const week=open.filter(t=>dateObj(t.due_date)>=now&&dateObj(t.due_date)<=in7);
-  const overdue=open.filter(t=>dateObj(t.due_date)<now);
-  const pending=open.filter(t=>t.status==='待確認');
-  $('kToday').textContent=today.length;$('kWeek').textContent=week.length;$('kOverdue').textContent=overdue.length;$('kPending').textContent=pending.length;$('kDays').textContent=Math.max(0,Math.ceil((activityDate-now)/86400000));
-
-  const prioritized=open.slice().sort((a,b)=>{
-    const ad=dateObj(a.due_date)||new Date('2099-01-01');
-    const bd=dateObj(b.due_date)||new Date('2099-01-01');
-    if(ad-bd!==0)return ad-bd;
-    const p={高:0,中:1,低:2};return (p[a.priority]??9)-(p[b.priority]??9);
+  const todayDue=open.filter(t=>dateObj(t.due_date)?.getTime()===today.getTime());
+  const thisWeek=open.filter(t=>{
+    const due=dateObj(t.due_date),start=dateObj(t.start_date);
+    return (due&&due>=thisStart&&due<=thisEnd)||(start&&start>=thisStart&&start<=thisEnd);
   });
-  $('nextTasksByOwner').innerHTML=taskOwnerGroups(prioritized).map(([owner,items])=>ownerTaskGroupHtml(owner,items,true)).join('')||'<div class="empty">目前沒有待處理工作</div>';
+  const nextWeek=open.filter(t=>{
+    const due=dateObj(t.due_date),start=dateObj(t.start_date);
+    return (due&&due>=nextStart&&due<=nextEnd)||(start&&start>=nextStart&&start<=nextEnd);
+  });
+  const overdue=open.filter(t=>dateObj(t.due_date)&&dateObj(t.due_date)<today);
 
-  const notStarted=open.filter(t=>t.status==='未開始');
-  $('notStartedByOwner').innerHTML=taskOwnerGroups(notStarted).map(([owner,items])=>ownerTaskGroupHtml(owner,items,false)).join('')||'<div class="empty">沒有未開始工作</div>';
+  $('kToday').textContent=todayDue.length;
+  $('kThisWeek').textContent=thisWeek.length;
+  $('kNextWeek').textContent=nextWeek.length;
+  $('kOverdue').textContent=overdue.length;
+  $('kDays').textContent=Math.max(0,Math.ceil((activityDate-today)/86400000));
+
+  const owners=dashboardOwnerOrder();
+  $('thisWeekOwnerTasks').innerHTML=owners.map(owner=>ownerWeekCard(owner,thisWeek.filter(t=>t.owner_name===owner))).join('');
+  $('nextWeekOwnerTasks').innerHTML=owners.map(owner=>ownerWeekCard(owner,nextWeek.filter(t=>t.owner_name===owner))).join('');
 }
 function renderTimeline(){
   const q=($('timelineSearch').value||'').toLowerCase(),o=$('timelineOwner').value,team=$('timelineTeam').value,status=$('timelineStatus').value;
