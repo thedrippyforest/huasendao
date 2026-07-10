@@ -57,7 +57,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
   box-shadow:0 5px 16px rgba(36,65,52,.06)
 }
 .meeting-row-head{
-  display:grid;grid-template-columns:180px minmax(260px,1fr) 120px 120px auto;
+  display:grid;grid-template-columns:180px minmax(300px,1fr) 120px auto;
   gap:8px;align-items:center;padding:10px 12px;background:#f8f5ef;border-bottom:1px solid var(--line)
 }
 .meeting-row-head input,.meeting-row-head select{width:100%}
@@ -96,7 +96,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 @media(max-width:1050px){
   .meeting-meta{grid-template-columns:1fr 1fr}
   .meeting-row-head{grid-template-columns:150px 1fr 100px auto}
-  .meeting-row-head .meeting-owner{display:none}
+  
   .action-row{grid-template-columns:30px 1.5fr 100px 110px 80px 75px 42px}
   .action-team{display:none}
 }
@@ -104,7 +104,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
   .meeting-meta,.meeting-row-body{grid-template-columns:1fr}
   .meeting-meta .wide{grid-column:auto}
   .meeting-row-head{grid-template-columns:1fr}
-  .meeting-row-head .meeting-owner{display:block}
+  
   .action-row{grid-template-columns:30px 1fr 42px}
   .action-owner,.action-team,.action-due,.action-priority{grid-column:2}
   .meeting-overview{grid-template-columns:1fr 1fr}
@@ -118,6 +118,48 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
   background:#fff7df;border:1px solid #ead7a0;color:#6f581f;font-size:13px
 }
 .draft-banner.show{display:flex;align-items:center;justify-content:space-between;gap:10px}
+</style>
+
+
+<style>
+/* 會議月曆 */
+.meeting-calendar-card{
+  background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;
+  box-shadow:0 5px 16px rgba(36,65,52,.06)
+}
+.calendar-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.calendar-head h3{margin:0}
+.calendar-nav{display:flex;gap:6px}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.calendar-weekday{text-align:center;font-size:12px;font-weight:700;color:var(--muted);padding:6px}
+.calendar-day{
+  min-height:76px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px;
+  text-align:left;position:relative;cursor:pointer
+}
+.calendar-day:hover{background:var(--mint)}
+.calendar-day.other-month{opacity:.38}
+.calendar-day.selected{outline:2px solid var(--forest);background:#edf4ef}
+.calendar-day.has-meeting::after{
+  content:"";position:absolute;right:7px;top:7px;width:9px;height:9px;border-radius:50%;background:var(--amber)
+}
+.calendar-day .day-number{font-weight:700}
+.calendar-day .meeting-label{
+  display:block;margin-top:18px;font-size:11px;color:var(--forest);white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+}
+/* 任務狀態圖例 */
+.timeline-legend{
+  display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:10px 0;padding:10px 12px;
+  background:#fff;border:1px solid var(--line);border-radius:12px
+}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.legend-dot{width:28px;height:10px;border-radius:999px;background:var(--sage)}
+.legend-dot.doing{background:var(--amber)}
+.legend-dot.pending{background:var(--red)}
+.legend-dot.done{background:var(--green)}
+@media(max-width:720px){
+  .calendar-day{min-height:60px;padding:5px}
+  .calendar-day .meeting-label{display:none}
+}
 </style>
 
 </head>
@@ -145,7 +187,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
   </div>
   <nav>
     <button class="active" data-view="dashboard">今天與接下來</button>
-    <button data-view="timeline">甘特時程</button>
+    <button data-view="timeline">任務時程總表</button>
     <button data-view="meeting">每週會議</button>
     <button data-view="pm">邦妮追蹤台</button>
   </nav>
@@ -168,14 +210,23 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 </section>
 
 <section id="timeline" class="view">
-  <div class="topbar"><div><h1>甘特時程</h1><div class="muted">點任務名稱從右側編輯，儲存後所有人即時更新。</div></div><button class="btn primary" onclick="openTaskDrawer()">＋新增工作</button></div>
+  <div class="topbar"><div><h1>任務時程總表</h1><div class="muted">點任務名稱即可編輯，所有人的進度會即時同步。</div></div><button class="btn primary" onclick="openTaskDrawer()">＋新增工作</button></div>
   <div class="filters">
     <input id="timelineSearch" placeholder="搜尋任務…" oninput="renderTimeline()">
     <select id="timelineOwner" onchange="renderTimeline()"><option value="">所有負責人</option></select>
     <select id="timelineTeam" onchange="renderTimeline()"><option value="">所有團隊</option></select>
     <select id="timelineStatus" onchange="renderTimeline()"><option value="">所有狀態</option><option>未開始</option><option>進行中</option><option>待確認</option><option>已完成</option></select>
   </div>
-  <div class="timeline-shell"><div class="timeline-scroll"><table class="timeline"><thead id="timelineHead"></thead><tbody id="timelineBody"></tbody></table></div></div>
+  
+<div class="timeline-legend">
+  <b style="color:var(--deep)">任務狀態</b>
+  <span class="legend-item"><span class="legend-dot"></span>未開始</span>
+  <span class="legend-item"><span class="legend-dot doing"></span>進行中</span>
+  <span class="legend-item"><span class="legend-dot pending"></span>待確認</span>
+  <span class="legend-item"><span class="legend-dot done"></span>已完成</span>
+</div>
+
+<div class="timeline-shell"><div class="timeline-scroll"><table class="timeline"><thead id="timelineHead"></thead><tbody id="timelineBody"></tbody></table></div></div>
 </section>
 
 
@@ -185,8 +236,8 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
     <div class="meeting-stickybar">
       <div class="topbar">
         <div>
-          <h1>一頁式會議紀錄</h1>
-          <div class="muted">邦妮可以一邊聽、一邊在同一頁持續補充各大項；會後一次儲存，需要執行的待辦可同步進甘特圖。</div>
+          <h1>會議記錄</h1>
+          <div class="muted">需要執行的待辦可同步進任務時程總表</div>
         </div>
         <div>
           <span id="meetingSaveState" class="save-state saved">已同步</span>
@@ -197,12 +248,25 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 
       <div class="filters">
         <label>選擇會議週 <input type="date" id="meetingWeek" onchange="changeMeetingWeek()"></label>
-        <button type="button" class="btn soft" onclick="addDefaultSections()">載入常用大項</button>
+        
         <button type="button" class="btn soft" onclick="refreshMeetingSafely()">重新載入</button>
       </div>
     </div>
 
-    <div class="meeting-meta">
+    
+<div class="meeting-calendar-card">
+  <div class="calendar-head">
+    <h3 id="meetingCalendarTitle">會議月曆</h3>
+    <div class="calendar-nav">
+      <button type="button" class="btn soft" onclick="changeMeetingCalendarMonth(-1)">‹</button>
+      <button type="button" class="btn soft" onclick="goMeetingCalendarToday()">今天</button>
+      <button type="button" class="btn soft" onclick="changeMeetingCalendarMonth(1)">›</button>
+    </div>
+  </div>
+  <div class="calendar-grid" id="meetingCalendar"></div>
+</div>
+
+<div class="meeting-meta">
       <label class="wide"><span>會議主題</span><input id="meetingTitle" placeholder="例如：整體活動討論分享" oninput="markMeetingDirty()"></label>
       <label><span>會議日期</span><input type="date" id="meetingDate" oninput="markMeetingDirty()"></label>
       <label><span>會議時間</span><input type="time" id="meetingTime" oninput="markMeetingDirty()"></label>
@@ -223,10 +287,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
       <div><strong id="onePageDeadlineCount">0</strong><span class="muted">已設定 Deadline</span></div>
     </div>
 
-    <div class="card" style="margin-bottom:12px">
-      <div class="section-head"><h3 style="margin:0">快速加入大項</h3><span class="muted">講到哪裡就先開哪一區，不必照順序。</span></div>
-      <div class="template-menu" id="meetingTemplateMenu"></div>
-    </div>
+    
 
     <div id="onePageMeetingEditor" class="meeting-editor"></div>
 
@@ -422,7 +483,7 @@ function collectMeetingDraft(){
     id:row.dataset.meetingId||'',
     category:row.querySelector('.section-category').value,
     topic:row.querySelector('.section-topic').value,
-    owner:row.querySelector('.meeting-owner').value,
+    
     status:row.querySelector('.section-status').value,
     content:row.querySelector('.section-content').value,
     decision:row.querySelector('.section-decision').value,
@@ -477,7 +538,7 @@ function restoreMeetingDraft(draft){
     const row=document.createElement('div');
     row.innerHTML=meetingRowHtml({
       id:s.id||'',type:s.category,status:s.status,topic:s.topic,
-      owner_name:s.owner,discussion_content:s.content,decision:s.decision
+      discussion_content:s.content,decision:s.decision
     },i);
     const el=row.firstElementChild;
     el.dataset.meetingId=s.id||'';
@@ -532,7 +593,7 @@ function buildTemplateMenu(){
 function actionRowHtml(action={}){
   const task=action.linked_task_id?tasks.find(t=>t.id===action.linked_task_id):null;
   return `<div class="action-row" data-action-id="${action.id||''}" data-task-id="${action.linked_task_id||''}">
-    <label class="sync-check" title="勾選後同步進甘特圖"><input type="checkbox" class="action-sync" ${action.sync_to_gantt||action.linked_task_id?'checked':''} onchange="markMeetingDirty()"></label>
+    <label class="sync-check" title="勾選後同步進任務時程總表"><input type="checkbox" class="action-sync" ${action.sync_to_gantt||action.linked_task_id?'checked':''} onchange="markMeetingDirty()"></label>
     <input class="action-title" value="${esc(action.title||'')}" placeholder="待辦事項／工作內容" oninput="markMeetingDirty()">
     <input class="action-owner" value="${esc(action.owner_name||'')}" placeholder="負責人" oninput="markMeetingDirty()">
     <select class="action-team" onchange="markMeetingDirty()">
@@ -555,7 +616,7 @@ function meetingRowHtml(m={},index=0){
         ${MEETING_CATEGORIES.map(v=>`<option ${m.type===v?'selected':''}>${v}</option>`).join('')}
       </select>
       <input class="section-topic" value="${esc(m.topic||'')}" placeholder="討論主題，例如：LINE Pay 合作方式" oninput="markMeetingDirty()">
-      <input class="meeting-owner" value="${esc(m.owner_name||'')}" placeholder="議題負責人" oninput="markMeetingDirty()">
+      
       <select class="section-status" onchange="markMeetingDirty()">
         ${['待討論','已決議','追蹤中','已結案'].map(v=>`<option ${m.status===v?'selected':''}>${v}</option>`).join('')}
       </select>
@@ -567,7 +628,7 @@ function meetingRowHtml(m={},index=0){
     </div>
     <div class="action-panel">
       <div class="action-panel-head">
-        <div><b>待辦事項</b><div class="muted">勾選最左側方框，即代表儲存時要同步成甘特任務。</div></div>
+        <div><b>待辦事項</b><div class="muted">勾選最左側方框，即代表儲存時要同步成任務時程總表。</div></div>
         <button type="button" class="btn soft" onclick="addActionRow(this)">＋新增待辦</button>
       </div>
       <div class="action-table">${actions.map(actionRowHtml).join('')}</div>
@@ -582,13 +643,13 @@ function addMeetingSection(category='其他'){
   const editor=$('onePageMeetingEditor');
   if(!editor)return;
   const shell=document.createElement('div');
-  shell.innerHTML=meetingRowHtml({type:category,status:'待討論'},editor.children.length);
+  shell.innerHTML=meetingRowHtml({type:category,status:'待討論'},0);
   const newRow=shell.firstElementChild;
   if(!newRow)return;
-  editor.appendChild(newRow);
+  editor.insertBefore(newRow,editor.firstChild);
   renumberMeetingRows();
   markMeetingDirty();
-  newRow.scrollIntoView({behavior:'smooth',block:'center'});
+  newRow.scrollIntoView({behavior:'smooth',block:'start'});
   setTimeout(()=>newRow.querySelector('.section-topic')?.focus({preventScroll:true}),80);
 }
 function removeMeetingSection(btn){
@@ -634,10 +695,65 @@ function loadMeetingMeta(summary,week){
   $('meetingRisk').value=summary?.risks||'';
   $('meetingGoal').value=summary?.goal||'';
 }
+
+let meetingCalendarCursor=new Date();
+function meetingDateMap(){
+  const map={};
+  summaries.forEach(s=>{
+    const date=fmt(s.meeting_date)||fmt(s.week_start);
+    if(date)map[date]=s;
+  });
+  meetings.forEach(m=>{
+    const summary=summaries.find(s=>s.week_start===m.week_start);
+    const date=fmt(summary?.meeting_date)||fmt(m.week_start);
+    if(date&&!map[date])map[date]={week_start:m.week_start,meeting_date:date,meeting_title:m.topic||'會議記錄'};
+  });
+  return map;
+}
+function renderMeetingCalendar(){
+  const box=$('meetingCalendar');if(!box)return;
+  const y=meetingCalendarCursor.getFullYear(),m=meetingCalendarCursor.getMonth();
+  $('meetingCalendarTitle').textContent=`${y} 年 ${m+1} 月會議月曆`;
+  const first=new Date(y,m,1),start=new Date(y,m,1-first.getDay());
+  const map=meetingDateMap(),selected=fmt($('meetingDate').value);
+  const weekdays=['日','一','二','三','四','五','六'];
+  let out=weekdays.map(w=>`<div class="calendar-weekday">${w}</div>`).join('');
+  for(let i=0;i<42;i++){
+    const dt=new Date(start);dt.setDate(start.getDate()+i);
+    const key=dt.toISOString().slice(0,10),item=map[key];
+    const other=dt.getMonth()!==m?' other-month':'';
+    const sel=key===selected?' selected':'';
+    out+=`<button type="button" class="calendar-day${other}${sel}${item?' has-meeting':''}" onclick="openMeetingFromCalendar('${key}','${item?.week_start||''}')">
+      <span class="day-number">${dt.getDate()}</span>
+      ${item?`<span class="meeting-label">${esc(item.meeting_title||'會議記錄')}</span>`:''}
+    </button>`;
+  }
+  box.innerHTML=out;
+}
+function changeMeetingCalendarMonth(delta){
+  meetingCalendarCursor=new Date(meetingCalendarCursor.getFullYear(),meetingCalendarCursor.getMonth()+delta,1);
+  renderMeetingCalendar();
+}
+function goMeetingCalendarToday(){
+  meetingCalendarCursor=new Date();
+  renderMeetingCalendar();
+}
+function openMeetingFromCalendar(date,week){
+  if(meetingDirty&&!confirm('目前有尚未儲存的內容，確定切換會議？'))return;
+  meetingDirty=false;
+  $('meetingWeek').value=week||monday(new Date(date+'T00:00:00'));
+  renderMeeting();
+  setTimeout(()=>{
+    if($('meetingDate'))$('meetingDate').value=date;
+    meetingCalendarCursor=new Date(date+'T00:00:00');
+    renderMeetingCalendar();
+  },0);
+}
+
 function renderMeeting(){
   const week=$('meetingWeek').value||monday();
   $('meetingWeek').value=week;
-  buildTemplateMenu();
+  renderMeetingCalendar();
 
   let draft=null;
   try{draft=JSON.parse(localStorage.getItem(meetingDraftKey())||'null')}catch(e){}
@@ -649,7 +765,13 @@ function renderMeeting(){
   $('meetingDraftBanner')?.classList.remove('show');
   const summary=summaries.find(x=>x.week_start===week)||null;
   loadMeetingMeta(summary,week);
-  const records=meetings.filter(m=>m.week_start===week).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  if($('meetingDate').value)meetingCalendarCursor=new Date($('meetingDate').value+'T00:00:00');
+  renderMeetingCalendar();
+  const records=meetings.filter(m=>m.week_start===week).sort((a,b)=>{
+    const aDone=a.status==='已結案'?1:0,bDone=b.status==='已結案'?1:0;
+    if(aDone!==bDone)return aDone-bDone;
+    return (b.sort_order||0)-(a.sort_order||0);
+  });
   $('onePageMeetingEditor').innerHTML=records.map(meetingRowHtml).join('');
   if(!records.length){
     const editor=$('onePageMeetingEditor');
@@ -671,7 +793,7 @@ async function saveActionItem(actionEl,meetingId){
   const sync=actionEl.querySelector('.action-sync').checked;
 
   if(sync){
-    if(!owner||!due)throw new Error(`待辦「${title}」要同步甘特圖，請填寫負責人與 Deadline。`);
+    if(!owner||!due)throw new Error(`待辦「${title}」要同步任務時程總表，請填寫負責人與 Deadline。`);
     const taskPayload={
       team,category:'會議決議',subcategory:actionEl.closest('.meeting-row').querySelector('.section-category').value,
       title,owner_name:owner,start_date:$('meetingDate').value||new Date().toISOString().slice(0,10),
@@ -733,7 +855,7 @@ async function saveWholeMeeting(){
       const meetingPayload={
         week_start:week,type:row.querySelector('.section-category').value,
         topic:topic||'未命名討論項目',discussion_content:content,decision,
-        owner_name:row.querySelector('.meeting-owner').value.trim(),
+        owner_name:null,
         status:row.querySelector('.section-status').value,sort_order:i,
         updated_by:currentUser.id
       };
@@ -765,7 +887,7 @@ async function saveWholeMeeting(){
 
     clearMeetingDraft();
     markMeetingSaved();
-    toast('整份會議紀錄與甘特任務已同步');
+    toast('整份會議紀錄與任務時程總表任務已同步');
     await loadAll();
   }catch(err){
     $('meetingSaveState').textContent='同步失敗';
