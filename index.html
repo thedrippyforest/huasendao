@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>花森島｜好好吃頓飯 Project Hub</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js"></script>
+<style>
+:root{--forest:#315948;--deep:#203f34;--sage:#aec4b4;--mint:#eaf2ed;--cream:#f6f1e7;--paper:#fffdf8;--ink:#3e3a35;--muted:#777168;--red:#c96961;--amber:#d4aa4d;--green:#7fa18a;--line:#e7dfd3;--shadow:0 10px 28px rgba(36,65,52,.10)}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif;background:#f5f2eb;color:var(--ink)}button,input,select,textarea{font:inherit}button{cursor:pointer}
+.hidden{display:none!important}.login{min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(160deg,#eef4ef,#f8f2e7)}.login-card{width:min(420px,100%);background:#fff;padding:28px;border-radius:20px;box-shadow:var(--shadow)}.login-card h1{margin-top:0;color:var(--deep)}.login-card input{width:100%;margin:7px 0}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}.sidebar{background:linear-gradient(180deg,var(--deep),#294d3e);color:#fff;padding:22px 16px;position:sticky;top:0;height:100vh}.logo{font-size:22px;font-weight:800;line-height:1.35}.logo small{display:block;font-size:12px;font-weight:500;opacity:.75;margin-top:7px}.persona{margin:18px 0;background:rgba(255,255,255,.10);padding:12px;border-radius:14px}.persona select{width:100%;border:0;border-radius:9px;padding:8px}.persona small{display:block;margin-bottom:6px;opacity:.75}nav button{width:100%;display:block;text-align:left;border:0;background:transparent;color:#fff;padding:11px 12px;border-radius:11px;margin:4px 0}nav button.active,nav button:hover{background:rgba(255,255,255,.14)}
+main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:block}.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}h1{font-size:26px;margin:0;color:var(--deep)}h2,h3,h4{color:var(--deep)}
+.btn{border:0;border-radius:10px;padding:9px 13px;font-weight:700}.primary{background:var(--forest);color:#fff}.soft{background:var(--mint);color:var(--deep)}.danger{background:#f6ddda;color:#873e38}
+.grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(5,minmax(130px,1fr))}.two{grid-template-columns:1.15fr .85fr}.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}.kpi strong{font-size:30px;display:block;color:var(--deep)}.kpi span{font-size:12px;color:var(--muted)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}input,select,textarea{border:1px solid #d9d1c5;border-radius:10px;padding:9px 10px;background:#fff}textarea{width:100%;min-height:90px;resize:vertical}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700}.done{background:#dce9dd;color:#355c4a}.doing{background:#fff0c6;color:#78612b}.pending{background:#f4d7d4;color:#8b4740}.idle{background:#eceae6;color:#666}
+.focus{border-left:5px solid var(--sage);background:#fbfaf6;border-radius:10px;padding:10px 12px;margin:8px 0}.focus.overdue{border-color:var(--red)}.focus.high{border-color:var(--amber)}.muted{font-size:12px;color:var(--muted)}.empty{padding:30px;text-align:center;color:#8b857d}.progress{height:8px;background:#ece8df;border-radius:999px;overflow:hidden}.progress i{display:block;height:100%;background:var(--green)}
+.todo-card{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid #eee8df}.task-link{border:0;background:transparent;text-align:left;padding:0;color:inherit}.task-link:hover b{text-decoration:underline;color:var(--forest)}
+.timeline-shell{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}.timeline-scroll{overflow:auto;max-height:72vh}.timeline{border-collapse:separate;border-spacing:0;width:100%;min-width:1400px;font-size:13px}.timeline th{position:sticky;top:0;background:var(--forest);color:#fff;padding:10px;z-index:8;text-align:left}.timeline td{padding:9px 10px;border-bottom:1px solid #eee8df;background:#fff}.timeline th.task,.timeline td.task{position:sticky;left:0;z-index:6;min-width:270px;max-width:270px;background:#fff}.timeline th.owner,.timeline td.owner{position:sticky;left:270px;z-index:6;min-width:90px;max-width:90px;background:#fff;box-shadow:5px 0 8px rgba(40,60,48,.06)}.timeline thead th.task,.timeline thead th.owner{z-index:12;background:var(--forest)}.timeline th.week{min-width:58px;text-align:center}.timeline td.week{min-width:58px;height:36px;padding:0;background:#faf9f5}.bar{height:18px;margin:9px 1px;border-radius:6px;background:var(--sage)}.bar.done{background:var(--green)}.bar.doing{background:var(--amber)}.bar.pending{background:var(--red)}
+.meeting-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.meeting-record{border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;background:#fff}.decision-box{margin-top:10px;padding:10px 12px;background:#f8f5ef;border-radius:10px}.linked-task{margin-top:10px;padding:10px 12px;border-left:4px solid var(--green);background:#edf4ef;border-radius:8px}
+.drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(20,34,28,.35);z-index:60}.drawer-backdrop.open{display:block}.drawer{position:fixed;top:0;right:-460px;width:min(460px,100%);height:100vh;background:#fff;z-index:70;box-shadow:-16px 0 45px rgba(0,0,0,.18);transition:.25s;padding:22px;overflow:auto}.drawer.open{right:0}.drawer-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.form-grid label span{display:block;font-size:12px;font-weight:700;margin-bottom:5px}.full{grid-column:1/-1}.drawer-actions{display:flex;gap:8px;margin-top:16px}.toast{position:fixed;right:22px;bottom:22px;background:var(--deep);color:#fff;padding:12px 16px;border-radius:12px;z-index:100;opacity:0;transform:translateY(10px);transition:.2s}.toast.show{opacity:1;transform:translateY(0)}
+@media(max-width:950px){.app{grid-template-columns:1fr}.sidebar{position:static;height:auto}nav{display:flex;overflow:auto}.kpis{grid-template-columns:repeat(2,1fr)}.two,.meeting-summary{grid-template-columns:1fr}}@media(max-width:620px){main{padding:16px}.kpis{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.full{grid-column:auto}}
+</style>
+</head>
+<body>
+
+<section id="loginView" class="login">
+  <div class="login-card">
+    <h1>花森島 Project Hub</h1>
+    <p>登入後，四位夥伴會看到同一份即時進度。</p>
+    <input id="loginEmail" type="email" placeholder="Email">
+    <input id="loginPassword" type="password" placeholder="密碼">
+    <button class="btn primary" style="width:100%;margin-top:8px" onclick="signIn()">登入</button>
+    <button class="btn soft" style="width:100%;margin-top:8px" onclick="signUp()">建立帳號</button>
+    <div id="loginMsg" class="muted" style="margin-top:10px"></div>
+  </div>
+</section>
+
+<div id="appView" class="app hidden">
+<aside class="sidebar">
+  <div class="logo">花森島<br>Project Hub<small>《好好吃頓飯》多人協作版</small></div>
+  <div class="persona">
+    <small id="userLabel">登入中</small>
+    <select id="persona" onchange="renderAll()"><option value="all">全案總覽</option></select>
+    <button class="btn soft" style="width:100%;margin-top:8px" onclick="signOut()">登出</button>
+  </div>
+  <nav>
+    <button class="active" data-view="dashboard">今天與接下來</button>
+    <button data-view="timeline">甘特時程</button>
+    <button data-view="meeting">每週會議</button>
+    <button data-view="pm">邦妮追蹤台</button>
+  </nav>
+</aside>
+<main>
+<section id="dashboard" class="view active">
+  <div class="topbar"><div><h1>今天與接下來</h1><div class="muted">即時同步大家的進度與內容。</div></div><button class="btn primary" onclick="openTaskDrawer()">＋新增工作</button></div>
+  <div class="grid kpis">
+    <div class="card kpi"><strong id="kToday">0</strong><span>今天到期</span></div>
+    <div class="card kpi"><strong id="kWeek">0</strong><span>7 天內到期</span></div>
+    <div class="card kpi"><strong id="kOverdue">0</strong><span>逾期未完成</span></div>
+    <div class="card kpi"><strong id="kPending">0</strong><span>等待確認</span></div>
+    <div class="card kpi"><strong id="kDays">0</strong><span>距離活動日</span></div>
+  </div>
+  <div class="grid two" style="margin-top:14px">
+    <div class="card"><h3>下一步要做什麼</h3><div id="nextTasks"></div></div>
+    <div class="card"><h3>誰目前最需要協助</h3><div id="ownerLoad"></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><h3>還沒做的工作</h3><div id="notStarted"></div></div>
+</section>
+
+<section id="timeline" class="view">
+  <div class="topbar"><div><h1>甘特時程</h1><div class="muted">點任務名稱從右側編輯，儲存後所有人即時更新。</div></div><button class="btn primary" onclick="openTaskDrawer()">＋新增工作</button></div>
+  <div class="filters">
+    <input id="timelineSearch" placeholder="搜尋任務…" oninput="renderTimeline()">
+    <select id="timelineOwner" onchange="renderTimeline()"><option value="">所有負責人</option></select>
+    <select id="timelineTeam" onchange="renderTimeline()"><option value="">所有團隊</option></select>
+    <select id="timelineStatus" onchange="renderTimeline()"><option value="">所有狀態</option><option>未開始</option><option>進行中</option><option>待確認</option><option>已完成</option></select>
+  </div>
+  <div class="timeline-shell"><div class="timeline-scroll"><table class="timeline"><thead id="timelineHead"></thead><tbody id="timelineBody"></tbody></table></div></div>
+</section>
+
+<section id="meeting" class="view">
+  <div class="topbar"><div><h1>每週會議</h1><div class="muted">決議可直接建立任務並同步進甘特圖。</div></div><button class="btn primary" onclick="openMeetingDrawer()">＋新增議題</button></div>
+  <div class="filters"><label>會議週 <input type="date" id="meetingWeek" onchange="renderMeeting()"></label></div>
+  <div class="meeting-summary">
+    <div class="card"><h3>本週目標</h3><textarea id="meetingGoal" onblur="saveMeetingSummary()"></textarea></div>
+    <div class="card"><h3>重要決策</h3><textarea id="meetingDecision" onblur="saveMeetingSummary()"></textarea></div>
+    <div class="card"><h3>風險與協調</h3><textarea id="meetingRisk" onblur="saveMeetingSummary()"></textarea></div>
+  </div>
+  <div class="grid two" style="margin-top:14px">
+    <div class="card"><h3>會前自動整理</h3><div id="autoMeeting"></div></div>
+    <div class="card"><h3>議題與決議</h3><div id="meetingRecords"></div></div>
+  </div>
+</section>
+
+<section id="pm" class="view">
+  <div class="topbar"><div><h1>邦妮追蹤台</h1><div class="muted">今天要追誰、追什麼。</div></div></div>
+  <div class="grid kpis">
+    <div class="card kpi"><strong id="pmOverdue">0</strong><span>逾期要追</span></div>
+    <div class="card kpi"><strong id="pmWeek">0</strong><span>7 天內到期</span></div>
+    <div class="card kpi"><strong id="pmBlocked">0</strong><span>跨組依賴風險</span></div>
+    <div class="card kpi"><strong id="pmPending">0</strong><span>等待確認</span></div>
+    <div class="card kpi"><strong id="pmHealth">0%</strong><span>專案健康度</span></div>
+  </div>
+  <div class="grid two" style="margin-top:14px"><div class="card"><h3>今天要追的人</h3><div id="pmPeople"></div></div><div class="card"><h3>高風險工作</h3><div id="pmRisks"></div></div></div>
+</section>
+</main>
+</div>
+
+<div id="backdrop" class="drawer-backdrop" onclick="closeDrawers()"></div>
+<aside id="taskDrawer" class="drawer">
+  <div class="drawer-head"><h2 id="taskDrawerTitle">新增工作</h2><button class="btn soft" onclick="closeDrawers()">關閉</button></div>
+  <div class="form-grid">
+    <input type="hidden" id="tDbId"><input type="hidden" id="tCode">
+    <label class="full"><span>工作名稱</span><input id="tName"></label>
+    <label><span>負責人</span><input id="tOwner"></label>
+    <label><span>團隊</span><select id="tTeam"><option>滴滴兒森</option><option>小花果玩戲場</option><option>物物島</option><option>專案管理</option><option>三方共同</option></select></label>
+    <label><span>開始日期</span><input type="date" id="tStart"></label>
+    <label><span>截止日期</span><input type="date" id="tEnd"></label>
+    <label><span>狀態</span><select id="tStatus"><option>未開始</option><option>進行中</option><option>待確認</option><option>已完成</option></select></label>
+    <label><span>優先</span><select id="tPriority"><option>高</option><option selected>中</option><option>低</option></select></label>
+    <label><span>完成率</span><input type="number" min="0" max="100" id="tProgress" value="0"></label>
+    <label><span>大分類</span><input id="tCategory"></label>
+    <label><span>子分類</span><input id="tSubcategory"></label>
+    <label class="full"><span>備註</span><textarea id="tNotes"></textarea></label>
+  </div>
+  <div class="drawer-actions"><button id="taskDeleteBtn" class="btn danger hidden" onclick="deleteTask()">刪除</button><button class="btn primary" onclick="saveTask()">儲存工作</button></div>
+</aside>
+
+<aside id="meetingDrawer" class="drawer">
+  <div class="drawer-head"><h2>新增會議議題</h2><button class="btn soft" onclick="closeDrawers()">關閉</button></div>
+  <div class="form-grid">
+    <input type="hidden" id="mDbId">
+    <label><span>會議週</span><input type="date" id="mWeek"></label>
+    <label><span>類型</span><select id="mType"><option>決策</option><option>進度追蹤</option><option>風險</option><option>跨組協調</option></select></label>
+    <label class="full"><span>討論議題</span><textarea id="mTopic"></textarea></label>
+    <label class="full"><span>會議決議</span><textarea id="mDecision"></textarea></label>
+    <label><span>議題負責人</span><input id="mOwner"></label>
+    <label><span>狀態</span><select id="mStatus"><option>待討論</option><option>已決議</option><option>追蹤中</option><option>已結案</option></select></label>
+    <label class="full"><input type="checkbox" id="mCreateTask" onchange="toggleMeetingTaskFields()"> 建立後續工作並加入甘特圖</label>
+    <div id="meetingTaskFields" class="full form-grid hidden">
+      <label class="full"><span>後續工作</span><input id="mTaskName"></label>
+      <label><span>工作負責人</span><input id="mTaskOwner"></label>
+      <label><span>團隊</span><select id="mTaskTeam"><option>滴滴兒森</option><option>小花果玩戲場</option><option>物物島</option><option>專案管理</option><option>三方共同</option></select></label>
+      <label><span>開始日期</span><input type="date" id="mTaskStart"></label>
+      <label><span>截止日期</span><input type="date" id="mTaskEnd"></label>
+      <label><span>優先</span><select id="mTaskPriority"><option>高</option><option selected>中</option><option>低</option></select></label>
+    </div>
+  </div>
+  <div class="drawer-actions"><button class="btn primary" onclick="saveMeeting()">儲存會議紀錄</button></div>
+</aside>
+
+<div id="toast" class="toast">已儲存</div>
+
+<script>
+let sb, currentUser, currentProfile;
+let tasks=[], meetings=[], summaries=[];
+
+const activityDate=new Date('2027-02-27T00:00:00');
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const fmt=s=>s?String(s).slice(0,10):'';
+const dateObj=s=>s?new Date(String(s).slice(0,10)+'T00:00:00'):null;
+const monday=(x=new Date())=>{const z=new Date(x),day=z.getDay()||7;z.setDate(z.getDate()-day+1);return z.toISOString().slice(0,10)};
+const statusClass=s=>s==='已完成'?'done':s==='進行中'?'doing':s==='待確認'?'pending':'idle';
+function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),1600)}
+
+async function boot(){
+  if(!window.APP_CONFIG?.SUPABASE_URL){$('loginMsg').textContent='尚未設定 config.js';return}
+  sb=supabase.createClient(APP_CONFIG.SUPABASE_URL,APP_CONFIG.SUPABASE_ANON_KEY);
+  const {data:{session}}=await sb.auth.getSession();
+  if(session) await enterApp(session.user);
+  sb.auth.onAuthStateChange(async(_,session)=>{if(session)await enterApp(session.user);else showLogin()});
+}
+async function signIn(){
+  $('loginMsg').textContent='登入中…';
+  const {error}=await sb.auth.signInWithPassword({email:$('loginEmail').value,password:$('loginPassword').value});
+  $('loginMsg').textContent=error?error.message:'';
+}
+async function signUp(){
+  const email=$('loginEmail').value,password=$('loginPassword').value;
+  const displayName=prompt('顯示名稱（例如：邦妮、maomao、小花果、物物島）');
+  const {error}=await sb.auth.signUp({email,password,options:{data:{display_name:displayName||email.split('@')[0]}}});
+  $('loginMsg').textContent=error?error.message:'帳號已建立，請依 Supabase 設定完成信箱驗證後登入。';
+}
+async function signOut(){await sb.auth.signOut()}
+function showLogin(){$('loginView').classList.remove('hidden');$('appView').classList.add('hidden')}
+async function enterApp(user){
+  currentUser=user;
+  const {data}=await sb.from('profiles').select('*').eq('id',user.id).single();
+  currentProfile=data;
+  $('userLabel').textContent=(data?.display_name||user.email)+'｜'+(data?.role||'member');
+  $('loginView').classList.add('hidden');$('appView').classList.remove('hidden');
+  await loadAll(); subscribeRealtime();
+}
+
+async function loadAll(){
+  const [{data:t},{data:m},{data:s}]=await Promise.all([
+    sb.from('tasks').select('*').order('due_date',{ascending:true}),
+    sb.from('meetings').select('*').order('week_start',{ascending:false}),
+    sb.from('meeting_summaries').select('*')
+  ]);
+  tasks=t||[];meetings=m||[];summaries=s||[];
+  fillPersona();renderAll();
+}
+function subscribeRealtime(){
+  sb.channel('project-hub')
+    .on('postgres_changes',{event:'*',schema:'public',table:'tasks'},loadAll)
+    .on('postgres_changes',{event:'*',schema:'public',table:'meetings'},loadAll)
+    .on('postgres_changes',{event:'*',schema:'public',table:'meeting_summaries'},loadAll)
+    .subscribe();
+}
+
+document.querySelectorAll('nav button').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  btn.classList.add('active');$(btn.dataset.view).classList.add('active');
+  if(btn.dataset.view==='timeline')renderTimeline();
+  if(btn.dataset.view==='meeting')renderMeeting();
+  if(btn.dataset.view==='pm')renderPM();
+});
+
+function fillPersona(){
+  const owners=[...new Set(tasks.map(t=>t.owner_name).filter(Boolean))];
+  $('persona').innerHTML='<option value="all">全案總覽</option>'+owners.map(x=>`<option>${esc(x)}</option>`).join('');
+  $('timelineOwner').innerHTML='<option value="">所有負責人</option>'+owners.map(x=>`<option>${esc(x)}</option>`).join('');
+  const teams=[...new Set(tasks.map(t=>t.team).filter(Boolean))];
+  $('timelineTeam').innerHTML='<option value="">所有團隊</option>'+teams.map(x=>`<option>${esc(x)}</option>`).join('');
+}
+function visibleTasks(){const p=$('persona').value;return p==='all'?tasks:tasks.filter(t=>t.owner_name===p)}
+function renderAll(){renderDashboard();renderTimeline();renderMeeting();renderPM()}
+function renderDashboard(){
+  const list=visibleTasks(),now=new Date();now.setHours(0,0,0,0);const in7=new Date(now);in7.setDate(now.getDate()+7);
+  const open=list.filter(t=>t.status!=='已完成');
+  const today=open.filter(t=>dateObj(t.due_date)?.getTime()===now.getTime());
+  const week=open.filter(t=>dateObj(t.due_date)>=now&&dateObj(t.due_date)<=in7);
+  const overdue=open.filter(t=>dateObj(t.due_date)<now);
+  const pending=open.filter(t=>t.status==='待確認');
+  $('kToday').textContent=today.length;$('kWeek').textContent=week.length;$('kOverdue').textContent=overdue.length;$('kPending').textContent=pending.length;$('kDays').textContent=Math.max(0,Math.ceil((activityDate-now)/86400000));
+  const next=open.slice().sort((a,b)=>(dateObj(a.due_date)||0)-(dateObj(b.due_date)||0)).slice(0,10);
+  $('nextTasks').innerHTML=next.map(t=>`<div class="todo-card"><input type="checkbox" onchange="quickComplete('${t.id}',this.checked)"><div><button class="task-link" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button><div class="muted">${esc(t.owner_name)}｜${fmt(t.due_date)}｜${esc(t.priority)}</div></div></div>`).join('')||'<div class="empty">目前沒有待處理工作</div>';
+  const owners=[...new Set(open.map(t=>t.owner_name).filter(Boolean))];
+  $('ownerLoad').innerHTML=owners.map(o=>{const arr=open.filter(t=>t.owner_name===o);return `<div style="margin:14px 0"><b>${esc(o)}</b><span style="float:right">${arr.length} 件</span><div class="progress"><i style="width:${Math.min(100,arr.length*8)}%"></i></div></div>`}).join('');
+  $('notStarted').innerHTML=open.filter(t=>t.status==='未開始').slice(0,12).map(t=>`<div class="focus"><button class="task-link" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button><div class="muted">${esc(t.owner_name)}｜預計 ${fmt(t.start_date)} 開始</div></div>`).join('')||'<div class="empty">沒有未開始工作</div>';
+}
+function renderTimeline(){
+  const q=($('timelineSearch').value||'').toLowerCase(),o=$('timelineOwner').value,team=$('timelineTeam').value,status=$('timelineStatus').value;
+  const list=tasks.filter(t=>(!o||t.owner_name===o)&&(!team||t.team===team)&&(!status||t.status===status)&&(!q||Object.values(t).join(' ').toLowerCase().includes(q)));
+  const weeks=[];for(let x=new Date('2026-07-06');x<=new Date('2027-02-28');x.setDate(x.getDate()+7))weeks.push(new Date(x));
+  $('timelineHead').innerHTML='<tr><th class="task">任務</th><th class="owner">負責人</th>'+weeks.map(w=>`<th class="week">${w.getMonth()+1}/${w.getDate()}</th>`).join('')+'</tr>';
+  $('timelineBody').innerHTML=list.map(t=>{const s=dateObj(t.start_date),e=dateObj(t.due_date);return `<tr><td class="task"><button class="task-link" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button><div class="muted">${esc(t.team)}｜${esc(t.status)}</div></td><td class="owner">${esc(t.owner_name)}</td>`+weeks.map(w=>{const we=new Date(w);we.setDate(we.getDate()+6);return `<td class="week">${s&&e&&w<=e&&we>=s?`<div class="bar ${statusClass(t.status)}"></div>`:''}</td>`}).join('')+'</tr>'}).join('');
+}
+function renderMeeting(){
+  const ws=$('meetingWeek').value||monday();$('meetingWeek').value=ws;
+  const sum=summaries.find(x=>x.week_start===ws)||{};
+  $('meetingGoal').value=sum.goal||'';$('meetingDecision').value=sum.important_decisions||'';$('meetingRisk').value=sum.risks||'';
+  const start=dateObj(ws),end=new Date(start);end.setDate(end.getDate()+6);
+  const overdue=tasks.filter(t=>t.status!=='已完成'&&dateObj(t.due_date)<start);
+  const due=tasks.filter(t=>t.status!=='已完成'&&dateObj(t.due_date)>=start&&dateObj(t.due_date)<=end);
+  const pending=tasks.filter(t=>t.status==='待確認');
+  $('autoMeeting').innerHTML=[['延遲未完成',overdue,'overdue'],['本週截止',due,''],['需要決策',pending,'high']].map(([n,a,c])=>`<h4>${n}（${a.length}）</h4>${a.slice(0,8).map(t=>`<div class="focus ${c}"><button class="task-link" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button><div class="muted">${esc(t.owner_name)}｜${fmt(t.due_date)}</div></div>`).join('')||'<div class="muted">無</div>'}`).join('');
+  const records=meetings.filter(m=>m.week_start===ws);
+  $('meetingRecords').innerHTML=records.map(m=>{const task=m.linked_task_id?tasks.find(t=>t.id===m.linked_task_id):null;return `<div class="meeting-record"><h4>${esc(m.topic)}</h4><div class="muted">${esc(m.type)}｜${esc(m.owner_name||'未指定')}｜${esc(m.status)}</div>${m.decision?`<div class="decision-box"><b>決議：</b>${esc(m.decision)}</div>`:''}${task?`<div class="linked-task"><b>已連動：</b>${esc(task.title)}<div class="muted">${esc(task.owner_name)}｜${fmt(task.due_date)}｜${esc(task.status)}</div></div>`:''}</div>`}).join('')||'<div class="empty">尚未新增本週議題</div>';
+}
+async function saveMeetingSummary(){
+  const week=$('meetingWeek').value||monday();
+  const payload={week_start:week,goal:$('meetingGoal').value,important_decisions:$('meetingDecision').value,risks:$('meetingRisk').value,updated_by:currentUser.id};
+  const {error}=await sb.from('meeting_summaries').upsert(payload,{onConflict:'week_start'});if(error)alert(error.message);else toast('會議摘要已同步');
+}
+function renderPM(){
+  const now=new Date();now.setHours(0,0,0,0);const in7=new Date(now);in7.setDate(now.getDate()+7);const open=tasks.filter(t=>t.status!=='已完成');
+  const overdue=open.filter(t=>dateObj(t.due_date)<now),due=open.filter(t=>dateObj(t.due_date)>=now&&dateObj(t.due_date)<=in7),pending=open.filter(t=>t.status==='待確認');
+  const blocked=open.filter(t=>(t.dependency_codes||[]).some(code=>tasks.find(x=>x.code===code&&x.status!=='已完成')));
+  $('pmOverdue').textContent=overdue.length;$('pmWeek').textContent=due.length;$('pmBlocked').textContent=blocked.length;$('pmPending').textContent=pending.length;$('pmHealth').textContent=Math.max(0,100-(overdue.length*2+pending.length+blocked.length))+'%';
+  const people={};[...overdue,...due,...pending].forEach(t=>people[t.owner_name||'未指派']=(people[t.owner_name||'未指派']||0)+1);
+  $('pmPeople').innerHTML=Object.entries(people).sort((a,b)=>b[1]-a[1]).map(([o,n])=>`<div class="focus"><b>${esc(o)}</b><span style="float:right">${n} 件需追蹤</span></div>`).join('')||'<div class="empty">目前沒有需追蹤對象</div>';
+  $('pmRisks').innerHTML=[...overdue,...blocked,...pending].slice(0,15).map(t=>`<div class="focus overdue"><button class="task-link" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button><div class="muted">${esc(t.owner_name)}｜${fmt(t.due_date)}｜${esc(t.status)}</div></div>`).join('')||'<div class="empty">目前沒有高風險工作</div>';
+}
+
+function openDrawer(id){$('backdrop').classList.add('open');$(id).classList.add('open')}function closeDrawers(){$('backdrop').classList.remove('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'))}
+function openTaskDrawer(id=''){
+  const t=id?tasks.find(x=>x.id===id):null;const set=(i,v='')=>$(i).value=v??'';
+  $('taskDrawerTitle').textContent=t?'編輯工作':'新增工作';set('tDbId',t?.id);set('tCode',t?.code);set('tName',t?.title);set('tOwner',t?.owner_name);set('tTeam',t?.team||'三方共同');set('tStart',fmt(t?.start_date)||new Date().toISOString().slice(0,10));set('tEnd',fmt(t?.due_date));set('tStatus',t?.status||'未開始');set('tPriority',t?.priority||'中');set('tProgress',t?.progress||0);set('tCategory',t?.category);set('tSubcategory',t?.subcategory);set('tNotes',t?.notes);$('taskDeleteBtn').classList.toggle('hidden',!t);openDrawer('taskDrawer');
+}
+function nextCode(team){const p=team==='滴滴兒森'?'DD':team==='小花果玩戲場'?'XH':team==='物物島'?'WW':team==='專案管理'?'PM':'ALL';const nums=tasks.filter(t=>t.code?.startsWith(p+'-')).map(t=>parseInt(t.code.split('-')[1])||0);return p+'-'+String((nums.length?Math.max(...nums):0)+1).padStart(3,'0')}
+async function saveTask(){
+  const id=$('tDbId').value,team=$('tTeam').value;
+  const payload={code:$('tCode').value||nextCode(team),team,category:$('tCategory').value,subcategory:$('tSubcategory').value,title:$('tName').value,owner_name:$('tOwner').value,start_date:$('tStart').value||null,due_date:$('tEnd').value||null,priority:$('tPriority').value,status:$('tStatus').value,progress:Number($('tProgress').value||0),notes:$('tNotes').value,updated_by:currentUser.id};
+  if(!payload.title||!payload.owner_name||!payload.due_date)return alert('請填寫工作名稱、負責人與截止日期。');
+  let q=id?sb.from('tasks').update(payload).eq('id',id):sb.from('tasks').insert({...payload,created_by:currentUser.id});
+  const {error}=await q;if(error)alert(error.message);else{closeDrawers();toast('工作已同步')}
+}
+async function deleteTask(){const id=$('tDbId').value;if(id&&confirm('確定刪除？')){const {error}=await sb.from('tasks').delete().eq('id',id);if(error)alert(error.message);else{closeDrawers();toast('工作已刪除')}}}
+async function quickComplete(id,checked){await sb.from('tasks').update({status:checked?'已完成':'進行中',progress:checked?100:50,updated_by:currentUser.id}).eq('id',id)}
+
+function toggleMeetingTaskFields(){$('meetingTaskFields').classList.toggle('hidden',!$('mCreateTask').checked)}
+function openMeetingDrawer(){
+  ['mDbId','mTopic','mDecision','mOwner','mTaskName','mTaskOwner','mTaskEnd'].forEach(i=>$(i).value='');
+  $('mWeek').value=$('meetingWeek').value||monday();$('mTaskStart').value=new Date().toISOString().slice(0,10);$('mCreateTask').checked=false;toggleMeetingTaskFields();openDrawer('meetingDrawer');
+}
+async function saveMeeting(){
+  if(!$('mTopic').value)return alert('請填寫議題');
+  let linkedTaskId=null;
+  if($('mCreateTask').checked){
+    const team=$('mTaskTeam').value;
+    const {data,error}=await sb.from('tasks').insert({code:nextCode(team),team,category:'會議決議',subcategory:$('mType').value,title:$('mTaskName').value,owner_name:$('mTaskOwner').value,start_date:$('mTaskStart').value,due_date:$('mTaskEnd').value,priority:$('mTaskPriority').value,status:'未開始',progress:0,notes:'由會議決議建立：'+$('mTopic').value,created_by:currentUser.id,updated_by:currentUser.id}).select().single();
+    if(error)return alert(error.message);linkedTaskId=data.id;
+  }
+  const {error}=await sb.from('meetings').insert({week_start:$('mWeek').value,type:$('mType').value,topic:$('mTopic').value,decision:$('mDecision').value,owner_name:$('mOwner').value,status:$('mStatus').value,linked_task_id:linkedTaskId,created_by:currentUser.id,updated_by:currentUser.id});
+  if(error)alert(error.message);else{closeDrawers();toast('會議紀錄已同步')}
+}
+
+$('meetingWeek').value=monday();
+boot();
+</script>
+</body>
+</html>

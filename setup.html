@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>花森島 Project Hub｜Supabase 初始匯入</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js"></script>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif;background:#f5f2eb;color:#3e3a35;min-height:100vh;display:grid;place-items:center;padding:24px}
+main{width:min(520px,100%);background:#fffdf8;border:1px solid #e7dfd3;border-radius:16px;box-shadow:0 10px 28px rgba(36,65,52,.10);padding:24px}
+h1{margin:0 0 8px;color:#203f34;font-size:24px}
+p{line-height:1.7;color:#777168}
+label{display:block;font-weight:700;margin:14px 0 6px}
+input{width:100%;box-sizing:border-box;border:1px solid #d9d1c5;border-radius:10px;padding:10px;background:#fff}
+button{width:100%;border:0;border-radius:10px;padding:11px 13px;font-weight:700;cursor:pointer;margin-top:12px}
+.primary{background:#315948;color:#fff}.soft{background:#eaf2ed;color:#203f34}
+#status{white-space:pre-wrap;background:#f8f5ef;border-radius:10px;padding:12px;margin-top:14px;min-height:54px;color:#4e4943}
+</style>
+</head>
+<body>
+<main>
+  <h1>Supabase 初始匯入</h1>
+  <p>請先用已註冊的團隊帳號登入，再匯入 102 筆初始任務。已存在的任務 code 會自動略過，不會重複建立。</p>
+  <label>Email</label>
+  <input id="email" type="email" autocomplete="email">
+  <label>密碼</label>
+  <input id="password" type="password" autocomplete="current-password">
+  <button class="soft" onclick="signIn()">登入</button>
+  <button class="primary" onclick="importTasks()">匯入初始任務</button>
+  <div id="status">尚未登入</div>
+</main>
+
+<script>
+const sb=supabase.createClient(APP_CONFIG.SUPABASE_URL,APP_CONFIG.SUPABASE_ANON_KEY);
+const $=id=>document.getElementById(id);
+const log=msg=>$('status').textContent=msg;
+
+async function signIn(){
+  log('登入中...');
+  const {data,error}=await sb.auth.signInWithPassword({email:$('email').value,password:$('password').value});
+  log(error?error.message:`已登入：${data.user.email}`);
+}
+
+function parseSqlValue(raw){
+  const value=raw.trim();
+  if(value.toLowerCase()==='null') return null;
+  if(value.endsWith('::date')) return value.split('::')[0].slice(1,-1);
+  if(value.startsWith('ARRAY[')){
+    const inside=value.slice(value.indexOf('[')+1,value.lastIndexOf(']')).trim();
+    if(!inside) return [];
+    return inside.split(',').map(x=>x.trim().slice(1,-1));
+  }
+  if(value.startsWith("'")&&value.endsWith("'")) return value.slice(1,-1).replaceAll("''","'");
+  const number=Number(value);
+  return Number.isFinite(number)?number:value;
+}
+
+function splitValues(row){
+  const inner=row.slice(1,-1);
+  const values=[];
+  let current='', inQuote=false, bracket=0;
+  for(const ch of inner){
+    if(ch==="'"){inQuote=!inQuote;current+=ch}
+    else if(!inQuote&&ch==='['){bracket++;current+=ch}
+    else if(!inQuote&&ch===']'){bracket--;current+=ch}
+    else if(!inQuote&&bracket===0&&ch===','){values.push(current.trim());current=''}
+    else current+=ch;
+  }
+  values.push(current.trim());
+  return values;
+}
+
+function parseSeed(sql){
+  const cols=['code','team','category','subcategory','title','owner_name','start_date','due_date','dependency_codes','priority','status','progress','milestone','notes'];
+  const body=sql.split('values')[1].split('on conflict')[0];
+  const rows=[];
+  let current='', depth=0, inQuote=false;
+  for(const ch of body){
+    if(ch==="'"){inQuote=!inQuote;current+=ch}
+    else if(!inQuote&&ch==='('){depth++;current+=ch}
+    else if(!inQuote&&ch===')'){
+      depth--;current+=ch;
+      if(depth===0){rows.push(current.trim());current=''}
+    }else if(depth>0) current+=ch;
+  }
+  return rows.map(row=>Object.fromEntries(splitValues(row).map((v,i)=>[cols[i],parseSqlValue(v)])));
+}
+
+async function importTasks(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){log('請先登入，再匯入任務。');return}
+  log('讀取 seed_tasks.sql...');
+  const sql=await fetch('./seed_tasks.sql').then(r=>r.text());
+  const tasks=parseSeed(sql);
+  let sent=0;
+  for(let i=0;i<tasks.length;i+=50){
+    const chunk=tasks.slice(i,i+50);
+    const {error}=await sb.from('tasks').upsert(chunk,{onConflict:'code',ignoreDuplicates:true});
+    if(error){log(`匯入失敗：${error.message}`);return}
+    sent+=chunk.length;
+    log(`已送出 ${sent}/${tasks.length} 筆...`);
+  }
+  const {count}=await sb.from('tasks').select('*',{count:'exact',head:true});
+  log(`匯入完成。Supabase 目前有 ${count ?? sent} 筆任務。`);
+}
+</script>
+</body>
+</html>
