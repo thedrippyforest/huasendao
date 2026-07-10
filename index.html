@@ -122,8 +122,8 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
     <label><span>狀態</span><select id="tStatus"><option>未開始</option><option>進行中</option><option>待確認</option><option>已完成</option></select></label>
     <label><span>優先</span><select id="tPriority"><option>高</option><option selected>中</option><option>低</option></select></label>
     <label><span>完成率</span><input type="number" min="0" max="100" id="tProgress" value="0"></label>
-    <label><span>大分類</span><input id="tCategory"></label>
-    <label><span>子分類</span><input id="tSubcategory"></label>
+    <label><span>大分類</span><select id="tCategory" onchange="fillSubcategoryOptions()"></select></label>
+    <label><span>子分類</span><select id="tSubcategory"></select></label>
     <label class="full"><span>備註</span><textarea id="tNotes"></textarea></label>
   </div>
   <div class="drawer-actions"><button id="taskDeleteBtn" class="btn danger hidden" onclick="deleteTask()">刪除</button><button class="btn primary" onclick="saveTask()">儲存工作</button></div>
@@ -165,6 +165,26 @@ const fmt=s=>s?String(s).slice(0,10):'';
 const dateObj=s=>s?new Date(String(s).slice(0,10)+'T00:00:00'):null;
 const monday=(x=new Date())=>{const z=new Date(x),day=z.getDay()||7;z.setDate(z.getDate()-day+1);return z.toISOString().slice(0,10)};
 const statusClass=s=>s==='已完成'?'done':s==='進行中'?'doing':s==='待確認'?'pending':'idle';
+const categoryPresets={
+  '行政':['會議','財務','合約','保險','法規'],
+  '企劃與補助':['國藝會','文化局'],
+  '演出製作':['劇本','演員','排練'],
+  '技術製作':['舞台','道具','舞台與道具','音樂','服裝'],
+  '場地與設備':['場地','技術場勘','技術廠商'],
+  '品牌視覺':['品牌識別','主視覺','宣傳素材','現場視覺','印刷'],
+  '企業贊助':['名單','提案','開發','簽約','執行'],
+  '食育活動':['教案','香菇教案','教具','食材','測試','修訂','培訓','總演練'],
+  '辦桌':['菜單','試菜','供應鏈','設備','流程','總確認'],
+  '菜單手冊':['內容','採訪','設計','印製'],
+  '行銷':['社群平台','品牌推廣','宣傳'],
+  '售票':['票務','系統','上線'],
+  '客服':['FAQ','名單'],
+  '現場執行':['前台','人力','招募','培訓','場佈'],
+  '周邊商品':['企劃','製作','銷售'],
+  '整合':['場勘','製作會議','桌上推演','總彩排'],
+  '現場':['進場','活動'],
+  '會議決議':['決策','進度追蹤','風險','跨組協調']
+};
 function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),1600)}
 
 async function boot(){
@@ -228,6 +248,34 @@ function fillPersona(){
   $('timelineOwner').innerHTML='<option value="">所有負責人</option>'+owners.map(x=>`<option>${esc(x)}</option>`).join('');
   const teams=[...new Set(tasks.map(t=>t.team).filter(Boolean))];
   $('timelineTeam').innerHTML='<option value="">所有團隊</option>'+teams.map(x=>`<option>${esc(x)}</option>`).join('');
+  fillCategoryOptions();
+}
+function getCategoryOptions(){
+  const map={};
+  Object.entries(categoryPresets).forEach(([category,subs])=>map[category]=new Set(subs));
+  tasks.forEach(t=>{
+    if(!t.category)return;
+    if(!map[t.category])map[t.category]=new Set();
+    if(t.subcategory)map[t.category].add(t.subcategory);
+  });
+  return Object.fromEntries(Object.entries(map).map(([category,subs])=>[category,[...subs].sort((a,b)=>a.localeCompare(b,'zh-Hant'))]));
+}
+function setSelectValue(id,value){
+  const el=$(id);
+  if(!value)return;
+  if(![...el.options].some(o=>o.value===value))el.add(new Option(value,value));
+  el.value=value;
+}
+function fillCategoryOptions(selected=''){
+  const map=getCategoryOptions(),current=selected||$('tCategory')?.value||Object.keys(map)[0]||'';
+  $('tCategory').innerHTML=Object.keys(map).sort((a,b)=>a.localeCompare(b,'zh-Hant')).map(x=>`<option>${esc(x)}</option>`).join('');
+  setSelectValue('tCategory',current);
+  fillSubcategoryOptions();
+}
+function fillSubcategoryOptions(selected=''){
+  const map=getCategoryOptions(),category=$('tCategory').value,subs=map[category]||[];
+  $('tSubcategory').innerHTML=subs.map(x=>`<option>${esc(x)}</option>`).join('');
+  if(selected)setSelectValue('tSubcategory',selected);
 }
 function visibleTasks(){const p=$('persona').value;return p==='all'?tasks:tasks.filter(t=>t.owner_name===p)}
 function renderAll(){renderDashboard();renderTimeline();renderMeeting();renderPM()}
@@ -282,7 +330,7 @@ function renderPM(){
 function openDrawer(id){$('backdrop').classList.add('open');$(id).classList.add('open')}function closeDrawers(){$('backdrop').classList.remove('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'))}
 function openTaskDrawer(id=''){
   const t=id?tasks.find(x=>x.id===id):null;const set=(i,v='')=>$(i).value=v??'';
-  $('taskDrawerTitle').textContent=t?'編輯工作':'新增工作';set('tDbId',t?.id);set('tCode',t?.code);set('tName',t?.title);set('tOwner',t?.owner_name);set('tTeam',t?.team||'三方共同');set('tStart',fmt(t?.start_date)||new Date().toISOString().slice(0,10));set('tEnd',fmt(t?.due_date));set('tStatus',t?.status||'未開始');set('tPriority',t?.priority||'中');set('tProgress',t?.progress||0);set('tCategory',t?.category);set('tSubcategory',t?.subcategory);set('tNotes',t?.notes);$('taskDeleteBtn').classList.toggle('hidden',!t);openDrawer('taskDrawer');
+  $('taskDrawerTitle').textContent=t?'編輯工作':'新增工作';set('tDbId',t?.id);set('tCode',t?.code);set('tName',t?.title);set('tOwner',t?.owner_name);set('tTeam',t?.team||'三方共同');set('tStart',fmt(t?.start_date)||new Date().toISOString().slice(0,10));set('tEnd',fmt(t?.due_date));set('tStatus',t?.status||'未開始');set('tPriority',t?.priority||'中');set('tProgress',t?.progress||0);fillCategoryOptions(t?.category);fillSubcategoryOptions(t?.subcategory);set('tNotes',t?.notes);$('taskDeleteBtn').classList.toggle('hidden',!t);openDrawer('taskDrawer');
 }
 function nextCode(team){const p=team==='滴滴兒森'?'DD':team==='小花果玩戲場'?'XH':team==='物物島'?'WW':team==='專案管理'?'PM':'ALL';const nums=tasks.filter(t=>t.code?.startsWith(p+'-')).map(t=>parseInt(t.code.split('-')[1])||0);return p+'-'+String((nums.length?Math.max(...nums):0)+1).padStart(3,'0')}
 async function saveTask(){
