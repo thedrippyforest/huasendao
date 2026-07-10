@@ -10,7 +10,7 @@
 :root{--forest:#315948;--deep:#203f34;--sage:#aec4b4;--mint:#eaf2ed;--cream:#f6f1e7;--paper:#fffdf8;--ink:#3e3a35;--muted:#777168;--red:#c96961;--amber:#d4aa4d;--green:#7fa18a;--line:#e7dfd3;--shadow:0 10px 28px rgba(36,65,52,.10)}
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif;background:#f5f2eb;color:var(--ink)}button,input,select,textarea{font:inherit}button{cursor:pointer}
 .hidden{display:none!important}.login{min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(160deg,#eef4ef,#f8f2e7)}.login-card{width:min(420px,100%);background:#fff;padding:28px;border-radius:20px;box-shadow:var(--shadow)}.login-card h1{margin-top:0;color:var(--deep)}.login-card input{width:100%;margin:7px 0}
-.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}.sidebar{background:linear-gradient(180deg,var(--deep),#294d3e);color:#fff;padding:22px 16px;position:sticky;top:0;height:100vh}.logo{font-size:22px;font-weight:800;line-height:1.35}.logo small{display:block;font-size:12px;font-weight:500;opacity:.75;margin-top:7px}.persona{margin:18px 0;background:rgba(255,255,255,.10);padding:12px;border-radius:14px}.persona select{width:100%;border:0;border-radius:9px;padding:8px}.persona small{display:block;margin-bottom:6px;opacity:.75}nav button{width:100%;display:block;text-align:left;border:0;background:transparent;color:#fff;padding:11px 12px;border-radius:11px;margin:4px 0}nav button.active,nav button:hover{background:rgba(255,255,255,.14)}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}.sidebar{background:linear-gradient(180deg,var(--deep),#294d3e);color:#fff;padding:22px 16px;position:sticky;top:0;height:100vh}.logo{font-size:22px;font-weight:800;line-height:1.35}.logo small{display:block;font-size:12px;font-weight:500;opacity:.75;margin-top:7px}.persona{margin:18px 0;background:rgba(255,255,255,.10);padding:12px;border-radius:14px}.persona select{width:100%;border:0;border-radius:9px;padding:8px}.persona small{display:block;margin-bottom:6px;opacity:.75}.history-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.history-actions .btn{padding:8px 6px}.history-actions .btn:disabled{cursor:not-allowed;opacity:.45}nav button{width:100%;display:block;text-align:left;border:0;background:transparent;color:#fff;padding:11px 12px;border-radius:11px;margin:4px 0}nav button.active,nav button:hover{background:rgba(255,255,255,.14)}
 main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:block}.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}h1{font-size:26px;margin:0;color:var(--deep)}h2,h3,h4{color:var(--deep)}
 .btn{border:0;border-radius:10px;padding:9px 13px;font-weight:700}.primary{background:var(--forest);color:#fff}.soft{background:var(--mint);color:var(--deep)}.danger{background:#f6ddda;color:#873e38}
 .grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(5,minmax(130px,1fr))}.two{grid-template-columns:1.15fr .85fr}.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}.kpi strong{font-size:30px;display:block;color:var(--deep)}.kpi span{font-size:12px;color:var(--muted)}
@@ -44,6 +44,10 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
   <div class="persona">
     <small id="userLabel">登入中</small>
     <select id="persona" onchange="renderAll()"><option value="all">全案總覽</option></select>
+    <div class="history-actions">
+      <button id="undoBtn" class="btn soft" onclick="undoTaskAction()" disabled>上一步</button>
+      <button id="redoBtn" class="btn soft" onclick="redoTaskAction()" disabled>下一步</button>
+    </div>
     <button class="btn soft" style="width:100%;margin-top:8px" onclick="signOut()">登出</button>
   </div>
   <nav>
@@ -157,6 +161,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 <script>
 let sb, currentUser, currentProfile;
 let tasks=[], meetings=[], summaries=[];
+let undoStack=[], redoStack=[];
 
 const activityDate=new Date('2027-02-27T00:00:00');
 const $=id=>document.getElementById(id);
@@ -186,6 +191,55 @@ const categoryPresets={
   '會議決議':['決策','進度追蹤','風險','跨組協調']
 };
 function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),1600)}
+function cloneTask(t){return t?JSON.parse(JSON.stringify(t)):null}
+function normalizeTaskForWrite(t){
+  const copy=cloneTask(t);
+  if(!copy)return copy;
+  delete copy.created_at;delete copy.updated_at;
+  return copy;
+}
+function updateHistoryButtons(){
+  if($('undoBtn'))$('undoBtn').disabled=!undoStack.length;
+  if($('redoBtn'))$('redoBtn').disabled=!redoStack.length;
+}
+function pushTaskAction(action){
+  undoStack.push(action);
+  redoStack=[];
+  updateHistoryButtons();
+}
+async function applyTaskAction(action,direction){
+  if(!action)return;
+  const before=normalizeTaskForWrite(action.before),after=normalizeTaskForWrite(action.after);
+  const source=direction==='undo'?after:before,target=direction==='undo'?before:after;
+  let error;
+  if(action.kind==='insert'){
+    if(direction==='undo')({error}=await sb.from('tasks').delete().eq('id',after.id));
+    else ({error}=await sb.from('tasks').upsert(after,{onConflict:'id'}));
+  }else if(action.kind==='delete'){
+    if(direction==='undo')({error}=await sb.from('tasks').upsert(before,{onConflict:'id'}));
+    else ({error}=await sb.from('tasks').delete().eq('id',before.id));
+  }else if(action.kind==='update'){
+    ({error}=await sb.from('tasks').update(target).eq('id',source.id));
+  }
+  if(error){alert(error.message);return false}
+  await loadAll();
+  toast(direction==='undo'?'已回到上一步':'已復原下一步');
+  return true;
+}
+async function undoTaskAction(){
+  const action=undoStack.pop();
+  if(!action)return;
+  if(await applyTaskAction(action,'undo'))redoStack.push(action);
+  else undoStack.push(action);
+  updateHistoryButtons();
+}
+async function redoTaskAction(){
+  const action=redoStack.pop();
+  if(!action)return;
+  if(await applyTaskAction(action,'redo'))undoStack.push(action);
+  else redoStack.push(action);
+  updateHistoryButtons();
+}
 
 async function boot(){
   if(!window.APP_CONFIG?.SUPABASE_URL){$('loginMsg').textContent='尚未設定 config.js';return}
@@ -243,11 +297,17 @@ document.querySelectorAll('nav button').forEach(btn=>btn.onclick=()=>{
 });
 
 function fillPersona(){
+  const selectedPersona=$('persona').value;
+  const selectedOwner=$('timelineOwner').value;
+  const selectedTeam=$('timelineTeam').value;
   const owners=[...new Set(tasks.map(t=>t.owner_name).filter(Boolean))];
   $('persona').innerHTML='<option value="all">全案總覽</option>'+owners.map(x=>`<option>${esc(x)}</option>`).join('');
   $('timelineOwner').innerHTML='<option value="">所有負責人</option>'+owners.map(x=>`<option>${esc(x)}</option>`).join('');
   const teams=[...new Set(tasks.map(t=>t.team).filter(Boolean))];
   $('timelineTeam').innerHTML='<option value="">所有團隊</option>'+teams.map(x=>`<option>${esc(x)}</option>`).join('');
+  if(selectedPersona==='all'||owners.includes(selectedPersona))$('persona').value=selectedPersona;
+  if(!selectedOwner||owners.includes(selectedOwner))$('timelineOwner').value=selectedOwner;
+  if(!selectedTeam||teams.includes(selectedTeam))$('timelineTeam').value=selectedTeam;
   fillCategoryOptions();
 }
 function getCategoryOptions(){
@@ -337,11 +397,16 @@ async function saveTask(){
   const id=$('tDbId').value,team=$('tTeam').value;
   const payload={code:$('tCode').value||nextCode(team),team,category:$('tCategory').value,subcategory:$('tSubcategory').value,title:$('tName').value,owner_name:$('tOwner').value,start_date:$('tStart').value||null,due_date:$('tEnd').value||null,priority:$('tPriority').value,status:$('tStatus').value,progress:Number($('tProgress').value||0),notes:$('tNotes').value,updated_by:currentUser.id};
   if(!payload.title||!payload.owner_name||!payload.due_date)return alert('請填寫工作名稱、負責人與截止日期。');
-  let q=id?sb.from('tasks').update(payload).eq('id',id):sb.from('tasks').insert({...payload,created_by:currentUser.id});
-  const {error}=await q;if(error)alert(error.message);else{closeDrawers();toast('工作已同步')}
+  const before=id?cloneTask(tasks.find(t=>t.id===id)):null;
+  const q=id?sb.from('tasks').update(payload).eq('id',id).select().single():sb.from('tasks').insert({...payload,created_by:currentUser.id}).select().single();
+  const {data,error}=await q;if(error)alert(error.message);else{pushTaskAction({kind:id?'update':'insert',before,after:cloneTask(data)});closeDrawers();toast('工作已同步')}
 }
-async function deleteTask(){const id=$('tDbId').value;if(id&&confirm('確定刪除？')){const {error}=await sb.from('tasks').delete().eq('id',id);if(error)alert(error.message);else{closeDrawers();toast('工作已刪除')}}}
-async function quickComplete(id,checked){await sb.from('tasks').update({status:checked?'已完成':'進行中',progress:checked?100:50,updated_by:currentUser.id}).eq('id',id)}
+async function deleteTask(){const id=$('tDbId').value,before=cloneTask(tasks.find(t=>t.id===id));if(id&&before&&confirm('確定刪除？')){const {error}=await sb.from('tasks').delete().eq('id',id);if(error)alert(error.message);else{pushTaskAction({kind:'delete',before,after:null});closeDrawers();toast('工作已刪除，可按上一步救回')}}}
+async function quickComplete(id,checked){
+  const before=cloneTask(tasks.find(t=>t.id===id));
+  const {data,error}=await sb.from('tasks').update({status:checked?'已完成':'進行中',progress:checked?100:50,updated_by:currentUser.id}).eq('id',id).select().single();
+  if(error)alert(error.message);else pushTaskAction({kind:'update',before,after:cloneTask(data)});
+}
 
 function toggleMeetingTaskFields(){$('meetingTaskFields').classList.toggle('hidden',!$('mCreateTask').checked)}
 function openMeetingDrawer(){
