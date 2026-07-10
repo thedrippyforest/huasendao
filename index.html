@@ -122,30 +122,31 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 
 
 <style>
-/* 會議月曆 */
-.meeting-calendar-card{
-  background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0;
-  box-shadow:0 5px 16px rgba(36,65,52,.06)
+/* 迷你會議月曆 */
+.meeting-title-area{display:flex;align-items:flex-start;gap:18px;flex-wrap:wrap}
+.compact-calendar-wrap{
+  width:250px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:9px 10px;
+  box-shadow:0 4px 12px rgba(36,65,52,.05)
 }
-.calendar-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-.calendar-head h3{margin:0}
-.calendar-nav{display:flex;gap:6px}
-.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
-.calendar-weekday{text-align:center;font-size:12px;font-weight:700;color:var(--muted);padding:6px}
+.compact-calendar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.compact-calendar-title{font-size:13px;font-weight:700;color:var(--deep)}
+.mini-nav{border:0;background:var(--mint);color:var(--deep);width:26px;height:26px;border-radius:8px;font-weight:800}
+.compact-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.calendar-weekday{text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:2px}
 .calendar-day{
-  min-height:76px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px;
-  text-align:left;position:relative;cursor:pointer
+  min-height:28px;border:0;background:transparent;border-radius:8px;padding:2px;
+  text-align:center;position:relative;cursor:pointer;font-size:11px
 }
 .calendar-day:hover{background:var(--mint)}
-.calendar-day.other-month{opacity:.38}
-.calendar-day.selected{outline:2px solid var(--forest);background:#edf4ef}
+.calendar-day.other-month{opacity:.28}
+.calendar-day.selected{background:var(--forest);color:#fff}
 .calendar-day.has-meeting::after{
-  content:"";position:absolute;right:7px;top:7px;width:9px;height:9px;border-radius:50%;background:var(--amber)
+  content:"";position:absolute;left:50%;bottom:2px;transform:translateX(-50%);
+  width:5px;height:5px;border-radius:50%;background:var(--amber)
 }
+.calendar-day.selected.has-meeting::after{background:#fff}
 .calendar-day .day-number{font-weight:700}
-.calendar-day .meeting-label{
-  display:block;margin-top:18px;font-size:11px;color:var(--forest);white-space:nowrap;overflow:hidden;text-overflow:ellipsis
-}
+.calendar-day .meeting-label{display:none}
 /* 任務狀態圖例 */
 .timeline-legend{
   display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:10px 0;padding:10px 12px;
@@ -157,8 +158,58 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 .legend-dot.pending{background:var(--red)}
 .legend-dot.done{background:var(--green)}
 @media(max-width:720px){
-  .calendar-day{min-height:60px;padding:5px}
-  .calendar-day .meeting-label{display:none}
+  .meeting-title-area{display:block}
+  .compact-calendar-wrap{width:100%;max-width:280px;margin-top:10px}
+}
+</style>
+
+
+<style>
+/* Dashboard owner task groups */
+.owner-task-board{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.owner-task-group{
+  border:1px solid var(--line);border-radius:15px;background:#fff;overflow:hidden
+}
+.owner-task-group-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 13px;background:#f8f5ef;border-bottom:1px solid var(--line)
+}
+.owner-task-group-head b{color:var(--deep)}
+.owner-task-list{padding:0 13px}
+.owner-task-item{
+  display:flex;align-items:flex-start;gap:9px;padding:10px 0;border-bottom:1px solid #eee8df
+}
+.owner-task-item:last-child{border-bottom:0}
+.owner-task-item input[type=checkbox]{margin-top:3px}
+.owner-task-title{border:0;background:transparent;text-align:left;padding:0;color:inherit}
+.owner-task-title:hover b{text-decoration:underline;color:var(--forest)}
+.owner-empty{padding:14px;color:var(--muted);font-size:12px}
+
+/* PM tracking */
+.pm-owner-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.pm-owner-card{border:1px solid var(--line);border-radius:13px;padding:12px;background:#fff}
+.pm-owner-card strong{display:block;font-size:18px;color:var(--deep)}
+.pm-owner-card .count{font-size:12px;color:var(--muted);margin-top:4px}
+.pm-task-list{display:grid;gap:8px}
+.pm-task-row{
+  display:grid;grid-template-columns:minmax(260px,1fr) 110px 110px 100px;
+  gap:10px;align-items:center;padding:11px 12px;border:1px solid var(--line);
+  border-radius:12px;background:#fff
+}
+.pm-task-row.overdue{border-color:#e4aaa4;background:#fff8f7}
+.pm-task-row.near{border-left:5px solid var(--amber)}
+.pm-task-row button{border:0;background:transparent;text-align:left;padding:0;color:inherit}
+.pm-task-row button:hover b{text-decoration:underline;color:var(--forest)}
+@media(max-width:1000px){
+  .owner-task-board{grid-template-columns:1fr}
+  .pm-owner-board{grid-template-columns:repeat(2,1fr)}
+  .pm-task-row{grid-template-columns:1fr 100px}
+  .pm-task-row .task-owner,.pm-task-row .task-status{grid-column:2}
+}
+@media(max-width:620px){
+  .pm-owner-board{grid-template-columns:1fr}
+  .pm-task-row{grid-template-columns:1fr}
+  .pm-task-row .task-owner,.pm-task-row .task-status{grid-column:auto}
 }
 </style>
 
@@ -189,12 +240,20 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
     <button class="active" data-view="dashboard">今天與接下來</button>
     <button data-view="timeline">任務時程總表</button>
     <button data-view="meeting">每週會議</button>
-    <button data-view="pm">邦妮追蹤台</button>
+    <button data-view="pm">專案經理追蹤台</button>
   </nav>
 </aside>
 <main>
+
 <section id="dashboard" class="view active">
-  <div class="topbar"><div><h1>今天與接下來</h1><div class="muted">即時同步大家的進度與內容。</div></div><button class="btn primary" onclick="openTaskDrawer()">＋新增工作</button></div>
+  <div class="topbar">
+    <div>
+      <h1>今天與接下來</h1>
+      <div class="muted">即時同步大家的進度與內容。</div>
+    </div>
+    <button class="btn primary" onclick="openTaskDrawer()">＋新增工作</button>
+  </div>
+
   <div class="grid kpis">
     <div class="card kpi"><strong id="kToday">0</strong><span>今天到期</span></div>
     <div class="card kpi"><strong id="kWeek">0</strong><span>7 天內到期</span></div>
@@ -202,11 +261,28 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
     <div class="card kpi"><strong id="kPending">0</strong><span>等待確認</span></div>
     <div class="card kpi"><strong id="kDays">0</strong><span>距離活動日</span></div>
   </div>
-  <div class="grid two" style="margin-top:14px">
-    <div class="card"><h3>下一步要做什麼</h3><div id="nextTasks"></div></div>
-    <div class="card"><h3>誰目前最需要協助</h3><div id="ownerLoad"></div></div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="section-head">
+      <div>
+        <h3 style="margin:0">每個人的任務總表</h3>
+        <div class="muted">打勾即完成</div>
+      </div>
+      <span class="muted">依截止日排序</span>
+    </div>
+    <div id="nextTasksByOwner" class="owner-task-board"></div>
   </div>
-  <div class="card" style="margin-top:14px"><h3>還沒做的工作</h3><div id="notStarted"></div></div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="section-head">
+      <div>
+        <h3 style="margin:0">還沒做的工作</h3>
+        <div class="muted">依負責人分類，快速查看尚未開始的工作</div>
+      </div>
+      <button class="btn soft" onclick="document.querySelector('[data-view=timeline]').click()">查看任務時程總表</button>
+    </div>
+    <div id="notStartedByOwner" class="owner-task-board"></div>
+  </div>
 </section>
 
 <section id="timeline" class="view">
@@ -235,9 +311,21 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
   <div class="meeting-page">
     <div class="meeting-stickybar">
       <div class="topbar">
-        <div>
-          <h1>會議記錄</h1>
-          <div class="muted">需要執行的待辦可同步進任務時程總表</div>
+        <div class="meeting-title-area">
+          <div>
+            <h1>會議記錄</h1>
+            <div class="muted">需要執行的待辦可同步進任務時程總表</div>
+          </div>
+          
+<div class="compact-calendar-wrap">
+  <div class="compact-calendar-head">
+    <button type="button" class="mini-nav" onclick="changeMeetingCalendarMonth(-1)">‹</button>
+    <div id="meetingCalendarTitle" class="compact-calendar-title"></div>
+    <button type="button" class="mini-nav" onclick="changeMeetingCalendarMonth(1)">›</button>
+  </div>
+  <div class="compact-calendar-grid" id="meetingCalendar"></div>
+</div>
+
         </div>
         <div>
           <span id="meetingSaveState" class="save-state saved">已同步</span>
@@ -254,18 +342,6 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
     </div>
 
     
-<div class="meeting-calendar-card">
-  <div class="calendar-head">
-    <h3 id="meetingCalendarTitle">會議月曆</h3>
-    <div class="calendar-nav">
-      <button type="button" class="btn soft" onclick="changeMeetingCalendarMonth(-1)">‹</button>
-      <button type="button" class="btn soft" onclick="goMeetingCalendarToday()">今天</button>
-      <button type="button" class="btn soft" onclick="changeMeetingCalendarMonth(1)">›</button>
-    </div>
-  </div>
-  <div class="calendar-grid" id="meetingCalendar"></div>
-</div>
-
 <div class="meeting-meta">
       <label class="wide"><span>會議主題</span><input id="meetingTitle" placeholder="例如：整體活動討論分享" oninput="markMeetingDirty()"></label>
       <label><span>會議日期</span><input type="date" id="meetingDate" oninput="markMeetingDirty()"></label>
@@ -304,16 +380,43 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 
 
 
+
 <section id="pm" class="view">
-  <div class="topbar"><div><h1>邦妮追蹤台</h1><div class="muted">今天要追誰、追什麼。</div></div></div>
+  <div class="topbar">
+    <div>
+      <h1>專案經理追蹤台</h1>
+      <div class="muted">快速掌握現在要追誰、近期要完成什麼，以及哪些任務尚未啟動。</div>
+    </div>
+  </div>
+
   <div class="grid kpis">
     <div class="card kpi"><strong id="pmOverdue">0</strong><span>逾期要追</span></div>
-    <div class="card kpi"><strong id="pmWeek">0</strong><span>7 天內到期</span></div>
-    <div class="card kpi"><strong id="pmBlocked">0</strong><span>跨組依賴風險</span></div>
+    <div class="card kpi"><strong id="pmThisNext">0</strong><span>本週與下週到期</span></div>
+    <div class="card kpi"><strong id="pmNearNotStarted">0</strong><span>接近但未開始</span></div>
     <div class="card kpi"><strong id="pmPending">0</strong><span>等待確認</span></div>
     <div class="card kpi"><strong id="pmHealth">0%</strong><span>專案健康度</span></div>
   </div>
-  <div class="grid two" style="margin-top:14px"><div class="card"><h3>今天要追的人</h3><div id="pmPeople"></div></div><div class="card"><h3>高風險工作</h3><div id="pmRisks"></div></div></div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>1. 今天要追的人</h3>
+    <div id="pmPeople" class="pm-owner-board"></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="section-head">
+      <h3 style="margin:0">2. 這週與下週要完成的任務內容</h3>
+      <span class="muted">點任務即可查看完整內容</span>
+    </div>
+    <div id="pmUpcomingTasks"></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="section-head">
+      <h3 style="margin:0">3. 時間接近但任務尚未開始</h3>
+      <span class="muted">開始日已到或 14 天內即將開始</span>
+    </div>
+    <div id="pmNearNotStartedTasks"></div>
+  </div>
 </section>
 </main>
 </div>
@@ -429,6 +532,35 @@ function fillPersona(){
 }
 function visibleTasks(){const p=$('persona').value;return p==='all'?tasks:tasks.filter(t=>t.owner_name===p)}
 function renderAll(){renderDashboard();renderTimeline();renderMeeting();renderPM()}
+
+function taskOwnerGroups(list){
+  const order=['邦妮','小美','若C','maomao','三方','未指派'];
+  const groups={};
+  list.forEach(t=>{
+    const owner=(t.owner_name||'未指派').trim()||'未指派';
+    (groups[owner]||(groups[owner]=[])).push(t);
+  });
+  return Object.entries(groups).sort((a,b)=>{
+    const ai=order.indexOf(a[0]),bi=order.indexOf(b[0]);
+    if(ai>=0||bi>=0)return (ai<0?999:ai)-(bi<0?999:bi);
+    return a[0].localeCompare(b[0],'zh-Hant');
+  });
+}
+function ownerTaskGroupHtml(owner,items,showCheckbox=true){
+  const sorted=items.slice().sort((a,b)=>(dateObj(a.due_date)||new Date('2099-01-01'))-(dateObj(b.due_date)||new Date('2099-01-01')));
+  return `<div class="owner-task-group">
+    <div class="owner-task-group-head"><b>${esc(owner)}</b><span class="muted">${sorted.length} 件</span></div>
+    <div class="owner-task-list">${
+      sorted.length?sorted.map(t=>`<div class="owner-task-item">
+        ${showCheckbox?`<input type="checkbox" title="打勾即完成" onchange="quickComplete('${t.id}',this.checked)">`:''}
+        <div>
+          <button class="owner-task-title" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button>
+          <div class="muted">${fmt(t.due_date)||'未設定期限'}｜${esc(t.priority)}｜${esc(t.status)}</div>
+        </div>
+      </div>`).join(''):'<div class="owner-empty">目前沒有工作</div>'
+    }</div>
+  </div>`;
+}
 function renderDashboard(){
   const list=visibleTasks(),now=new Date();now.setHours(0,0,0,0);const in7=new Date(now);in7.setDate(now.getDate()+7);
   const open=list.filter(t=>t.status!=='已完成');
@@ -437,11 +569,17 @@ function renderDashboard(){
   const overdue=open.filter(t=>dateObj(t.due_date)<now);
   const pending=open.filter(t=>t.status==='待確認');
   $('kToday').textContent=today.length;$('kWeek').textContent=week.length;$('kOverdue').textContent=overdue.length;$('kPending').textContent=pending.length;$('kDays').textContent=Math.max(0,Math.ceil((activityDate-now)/86400000));
-  const next=open.slice().sort((a,b)=>(dateObj(a.due_date)||0)-(dateObj(b.due_date)||0)).slice(0,10);
-  $('nextTasks').innerHTML=next.map(t=>`<div class="todo-card"><input type="checkbox" onchange="quickComplete('${t.id}',this.checked)"><div><button class="task-link" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button><div class="muted">${esc(t.owner_name)}｜${fmt(t.due_date)}｜${esc(t.priority)}</div></div></div>`).join('')||'<div class="empty">目前沒有待處理工作</div>';
-  const owners=[...new Set(open.map(t=>t.owner_name).filter(Boolean))];
-  $('ownerLoad').innerHTML=owners.map(o=>{const arr=open.filter(t=>t.owner_name===o);return `<div style="margin:14px 0"><b>${esc(o)}</b><span style="float:right">${arr.length} 件</span><div class="progress"><i style="width:${Math.min(100,arr.length*8)}%"></i></div></div>`}).join('');
-  $('notStarted').innerHTML=open.filter(t=>t.status==='未開始').slice(0,12).map(t=>`<div class="focus"><button class="task-link" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button><div class="muted">${esc(t.owner_name)}｜預計 ${fmt(t.start_date)} 開始</div></div>`).join('')||'<div class="empty">沒有未開始工作</div>';
+
+  const prioritized=open.slice().sort((a,b)=>{
+    const ad=dateObj(a.due_date)||new Date('2099-01-01');
+    const bd=dateObj(b.due_date)||new Date('2099-01-01');
+    if(ad-bd!==0)return ad-bd;
+    const p={高:0,中:1,低:2};return (p[a.priority]??9)-(p[b.priority]??9);
+  });
+  $('nextTasksByOwner').innerHTML=taskOwnerGroups(prioritized).map(([owner,items])=>ownerTaskGroupHtml(owner,items,true)).join('')||'<div class="empty">目前沒有待處理工作</div>';
+
+  const notStarted=open.filter(t=>t.status==='未開始');
+  $('notStartedByOwner').innerHTML=taskOwnerGroups(notStarted).map(([owner,items])=>ownerTaskGroupHtml(owner,items,false)).join('')||'<div class="empty">沒有未開始工作</div>';
 }
 function renderTimeline(){
   const q=($('timelineSearch').value||'').toLowerCase(),o=$('timelineOwner').value,team=$('timelineTeam').value,status=$('timelineStatus').value;
@@ -697,6 +835,14 @@ function loadMeetingMeta(summary,week){
 }
 
 let meetingCalendarCursor=new Date();
+
+function localDateKey(dt){
+  const y=dt.getFullYear();
+  const m=String(dt.getMonth()+1).padStart(2,'0');
+  const d=String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
 function meetingDateMap(){
   const map={};
   summaries.forEach(s=>{
@@ -713,14 +859,14 @@ function meetingDateMap(){
 function renderMeetingCalendar(){
   const box=$('meetingCalendar');if(!box)return;
   const y=meetingCalendarCursor.getFullYear(),m=meetingCalendarCursor.getMonth();
-  $('meetingCalendarTitle').textContent=`${y} 年 ${m+1} 月會議月曆`;
+  $('meetingCalendarTitle').textContent=`${y}/${String(m+1).padStart(2,'0')}`;
   const first=new Date(y,m,1),start=new Date(y,m,1-first.getDay());
   const map=meetingDateMap(),selected=fmt($('meetingDate').value);
   const weekdays=['日','一','二','三','四','五','六'];
   let out=weekdays.map(w=>`<div class="calendar-weekday">${w}</div>`).join('');
   for(let i=0;i<42;i++){
     const dt=new Date(start);dt.setDate(start.getDate()+i);
-    const key=dt.toISOString().slice(0,10),item=map[key];
+    const key=localDateKey(dt),item=map[key];
     const other=dt.getMonth()!==m?' other-month':'';
     const sel=key===selected?' selected':'';
     out+=`<button type="button" class="calendar-day${other}${sel}${item?' has-meeting':''}" onclick="openMeetingFromCalendar('${key}','${item?.week_start||''}')">
@@ -741,11 +887,11 @@ function goMeetingCalendarToday(){
 function openMeetingFromCalendar(date,week){
   if(meetingDirty&&!confirm('目前有尚未儲存的內容，確定切換會議？'))return;
   meetingDirty=false;
-  $('meetingWeek').value=week||monday(new Date(date+'T00:00:00'));
+  $('meetingWeek').value=week||monday(new Date(date.replace(/-/g,'/')+' 00:00:00'));
   renderMeeting();
   setTimeout(()=>{
     if($('meetingDate'))$('meetingDate').value=date;
-    meetingCalendarCursor=new Date(date+'T00:00:00');
+    meetingCalendarCursor=new Date(date.replace(/-/g,'/')+' 00:00:00');
     renderMeetingCalendar();
   },0);
 }
@@ -765,7 +911,7 @@ function renderMeeting(){
   $('meetingDraftBanner')?.classList.remove('show');
   const summary=summaries.find(x=>x.week_start===week)||null;
   loadMeetingMeta(summary,week);
-  if($('meetingDate').value)meetingCalendarCursor=new Date($('meetingDate').value+'T00:00:00');
+  if($('meetingDate').value)meetingCalendarCursor=new Date($('meetingDate').value.replace(/-/g,'/')+' 00:00:00');
   renderMeetingCalendar();
   const records=meetings.filter(m=>m.week_start===week).sort((a,b)=>{
     const aDone=a.status==='已結案'?1:0,bDone=b.status==='已結案'?1:0;
@@ -899,14 +1045,61 @@ window.addEventListener('beforeunload',e=>{
   if(meetingDirty){e.preventDefault();e.returnValue='';}
 });
 
+
+function pmTaskRowsHtml(list,mode='upcoming'){
+  if(!list.length)return '<div class="empty">目前沒有符合條件的任務</div>';
+  const now=new Date();now.setHours(0,0,0,0);
+  return `<div class="pm-task-list">${list.map(t=>{
+    const due=dateObj(t.due_date),start=dateObj(t.start_date);
+    const cls=(due&&due<now?' overdue':'')+(mode==='near'?' near':'');
+    return `<div class="pm-task-row${cls}">
+      <button onclick="openTaskDrawer('${t.id}')">
+        <b>${esc(t.title)}</b>
+        <div class="muted">${esc(t.team||'')}｜${esc(t.category||'')}</div>
+      </button>
+      <div class="task-owner">${esc(t.owner_name||'未指派')}</div>
+      <div>${mode==='near'?`開始 ${fmt(t.start_date)||'未設定'}`:`截止 ${fmt(t.due_date)||'未設定'}`}</div>
+      <div class="task-status"><span class="badge ${statusClass(t.status)}">${esc(t.status)}</span></div>
+    </div>`;
+  }).join('')}</div>`;
+}
 function renderPM(){
-  const now=new Date();now.setHours(0,0,0,0);const in7=new Date(now);in7.setDate(now.getDate()+7);const open=tasks.filter(t=>t.status!=='已完成');
-  const overdue=open.filter(t=>dateObj(t.due_date)<now),due=open.filter(t=>dateObj(t.due_date)>=now&&dateObj(t.due_date)<=in7),pending=open.filter(t=>t.status==='待確認');
-  const blocked=open.filter(t=>(t.dependency_codes||[]).some(code=>tasks.find(x=>x.code===code&&x.status!=='已完成')));
-  $('pmOverdue').textContent=overdue.length;$('pmWeek').textContent=due.length;$('pmBlocked').textContent=blocked.length;$('pmPending').textContent=pending.length;$('pmHealth').textContent=Math.max(0,100-(overdue.length*2+pending.length+blocked.length))+'%';
-  const people={};[...overdue,...due,...pending].forEach(t=>people[t.owner_name||'未指派']=(people[t.owner_name||'未指派']||0)+1);
-  $('pmPeople').innerHTML=Object.entries(people).sort((a,b)=>b[1]-a[1]).map(([o,n])=>`<div class="focus"><b>${esc(o)}</b><span style="float:right">${n} 件需追蹤</span></div>`).join('')||'<div class="empty">目前沒有需追蹤對象</div>';
-  $('pmRisks').innerHTML=[...overdue,...blocked,...pending].slice(0,15).map(t=>`<div class="focus overdue"><button class="task-link" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button><div class="muted">${esc(t.owner_name)}｜${fmt(t.due_date)}｜${esc(t.status)}</div></div>`).join('')||'<div class="empty">目前沒有高風險工作</div>';
+  const now=new Date();now.setHours(0,0,0,0);
+  const end14=new Date(now);end14.setDate(now.getDate()+14);
+  const open=tasks.filter(t=>t.status!=='已完成');
+  const overdue=open.filter(t=>dateObj(t.due_date)&&dateObj(t.due_date)<now);
+  const upcoming=open.filter(t=>dateObj(t.due_date)&&dateObj(t.due_date)>=now&&dateObj(t.due_date)<=end14)
+    .sort((a,b)=>dateObj(a.due_date)-dateObj(b.due_date));
+  const pending=open.filter(t=>t.status==='待確認');
+  const nearNotStarted=open.filter(t=>{
+    if(t.status!=='未開始')return false;
+    const start=dateObj(t.start_date);
+    return start && start<=end14;
+  }).sort((a,b)=>dateObj(a.start_date)-dateObj(b.start_date));
+
+  $('pmOverdue').textContent=overdue.length;
+  $('pmThisNext').textContent=upcoming.length;
+  $('pmNearNotStarted').textContent=nearNotStarted.length;
+  $('pmPending').textContent=pending.length;
+  const health=Math.max(0,100-(overdue.length*2+pending.length+nearNotStarted.length));
+  $('pmHealth').textContent=health+'%';
+
+  const todayAttention=[...overdue,...pending,...upcoming.filter(t=>dateObj(t.due_date)?.getTime()===now.getTime())];
+  const people={};
+  todayAttention.forEach(t=>{
+    const owner=t.owner_name||'未指派';
+    people[owner]=(people[owner]||0)+1;
+  });
+  $('pmPeople').innerHTML=Object.entries(people).sort((a,b)=>b[1]-a[1]).map(([owner,count])=>`
+    <div class="pm-owner-card">
+      <strong>${esc(owner)}</strong>
+      <div class="count">${count} 件需要追蹤</div>
+      <button class="btn soft" style="margin-top:8px" onclick="document.querySelector('[data-view=timeline]').click();$('timelineOwner').value='${esc(owner)}';renderTimeline()">查看任務</button>
+    </div>
+  `).join('')||'<div class="empty">今天沒有需要特別追蹤的人</div>';
+
+  $('pmUpcomingTasks').innerHTML=pmTaskRowsHtml(upcoming,'upcoming');
+  $('pmNearNotStartedTasks').innerHTML=pmTaskRowsHtml(nearNotStarted,'near');
 }
 
 function openDrawer(id){$('backdrop').classList.add('open');$(id).classList.add('open')}function closeDrawers(){$('backdrop').classList.remove('open');document.querySelectorAll('.drawer').forEach(x=>x.classList.remove('open'))}
