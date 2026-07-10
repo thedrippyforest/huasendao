@@ -296,6 +296,93 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 @media(max-width:520px){.identity-grid{grid-template-columns:1fr}}
 </style>
 
+
+<style>
+/* 手機版任務時程總表 */
+.timeline-mobile-controls{
+  display:none;gap:8px;align-items:center;margin:10px 0
+}
+.timeline-mobile-controls .btn.active{
+  background:var(--forest);color:#fff
+}
+.mobile-task-list{display:none}
+.mobile-task-card{
+  background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px;margin:10px 0;
+  box-shadow:0 4px 12px rgba(36,65,52,.06)
+}
+.mobile-task-card-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px
+}
+.mobile-task-card h4{margin:0;color:var(--deep);font-size:15px;line-height:1.45}
+.mobile-task-meta{
+  display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0;font-size:12px
+}
+.mobile-task-meta div{
+  background:#f8f5ef;border-radius:9px;padding:7px 8px
+}
+.mobile-task-meta b{display:block;color:var(--deep);margin-bottom:2px}
+.mobile-mini-timeline{
+  overflow-x:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+  border:1px solid var(--line);border-radius:10px;background:#faf9f5;margin-top:10px
+}
+.mobile-mini-timeline-inner{
+  position:relative;min-width:720px;height:54px
+}
+.mobile-mini-months{
+  display:grid;grid-template-columns:repeat(8,1fr);height:20px;border-bottom:1px solid var(--line);
+  font-size:10px;color:var(--muted);text-align:center
+}
+.mobile-mini-months span{padding-top:3px;border-right:1px solid #eee8df}
+.mobile-mini-bar-area{position:relative;height:34px}
+.mobile-mini-grid{
+  position:absolute;inset:0;display:grid;grid-template-columns:repeat(8,1fr)
+}
+.mobile-mini-grid span{border-right:1px solid #eee8df}
+.mobile-mini-bar{
+  position:absolute;top:9px;height:16px;border-radius:7px;background:var(--sage);min-width:6px
+}
+.mobile-mini-bar.doing{background:var(--amber)}
+.mobile-mini-bar.pending{background:var(--red)}
+.mobile-mini-bar.done{background:var(--green)}
+.mobile-scroll-hint{
+  font-size:11px;color:var(--muted);margin-top:5px;text-align:right
+}
+
+/* Make desktop gantt reliably scrollable on touch devices */
+.timeline-scroll{
+  overflow-x:auto!important;
+  overflow-y:auto!important;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x pan-y;
+  overscroll-behavior:contain;
+}
+.timeline-shell{min-width:0}
+.timeline{width:max-content!important;min-width:1400px!important}
+.timeline th.week,.timeline td.week{min-width:58px!important}
+
+@media(max-width:760px){
+  .timeline-mobile-controls{display:flex}
+  .timeline-shell.mobile-card-mode{display:none}
+  .mobile-task-list.mobile-card-mode{display:block}
+  .timeline-shell.mobile-gantt-mode{display:block}
+  .mobile-task-list.mobile-gantt-mode{display:none}
+  .timeline-scroll{max-height:66vh}
+  .timeline th.task,.timeline td.task{min-width:210px;max-width:210px}
+  .timeline th.owner,.timeline td.owner{left:210px;min-width:78px;max-width:78px}
+  .timeline{min-width:1320px!important}
+  .filters{gap:6px}
+  .filters input,.filters select{max-width:100%;flex:1 1 140px}
+}
+</style>
+
+
+<style>
+.login-session-note{
+  margin-top:10px;padding:9px 11px;border-radius:10px;background:#eef5f0;
+  color:var(--forest);font-size:12px
+}
+</style>
+
 </head>
 <body>
 
@@ -329,7 +416,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 
     <button type="button" class="btn primary" style="width:100%;margin-top:10px" onclick="signIn()">登入</button>
     <div id="loginMsg" class="muted" style="margin-top:10px"></div>
-    <div class="login-help">每位夥伴使用自己的身份登入，系統才能記錄建立者與最後修改者。</div>
+    <div class="login-help">每位夥伴使用自己的身份登入，系統才能記錄建立者與最後修改者。</div><div class="login-session-note">同一天登入後，重新整理或再次開啟網站都不需要重新輸入密碼。</div>
   </div>
 </section>
 
@@ -414,7 +501,21 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
   <span class="legend-item"><span class="legend-dot done"></span>已完成</span>
 </div>
 
-<div class="timeline-shell"><div class="timeline-scroll"><table class="timeline"><thead id="timelineHead"></thead><tbody id="timelineBody"></tbody></table></div></div>
+
+<div class="muted" style="margin-top:4px">手機建議使用卡片模式；需要看完整時間軸時可切換時程模式並左右滑動。</div>
+<div class="timeline-mobile-controls">
+  <button type="button" id="mobileCardViewBtn" class="btn soft active" onclick="setMobileTimelineMode('cards')">卡片模式</button>
+  <button type="button" id="mobileGanttViewBtn" class="btn soft" onclick="setMobileTimelineMode('gantt')">時程模式</button>
+</div>
+<div id="mobileTaskList" class="mobile-task-list mobile-card-mode"></div>
+<div id="timelineShell" class="timeline-shell mobile-card-mode">
+  <div class="timeline-scroll">
+    <table class="timeline">
+      <thead id="timelineHead"></thead>
+      <tbody id="timelineBody"></tbody>
+    </table>
+  </div>
+</div>
 </section>
 
 
@@ -575,12 +676,48 @@ const monday=(x=new Date())=>{const z=new Date(x),day=z.getDay()||7;z.setDate(z.
 const statusClass=s=>s==='已完成'?'done':s==='進行中'?'doing':s==='待確認'?'pending':'idle';
 function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),1600)}
 
+
+const SESSION_DAY_KEY='huasendao_session_day';
+function localTodayKey(){
+  const now=new Date();
+  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+}
+function markSessionForToday(){
+  localStorage.setItem(SESSION_DAY_KEY,localTodayKey());
+}
+function sessionIsForToday(){
+  return localStorage.getItem(SESSION_DAY_KEY)===localTodayKey();
+}
+async function clearExpiredDailySession(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(session && !sessionIsForToday()){
+    await sb.auth.signOut();
+    return null;
+  }
+  return session;
+}
+
 async function boot(){
   if(!window.APP_CONFIG?.SUPABASE_URL){$('loginMsg').textContent='尚未設定 config.js';return}
-  sb=supabase.createClient(APP_CONFIG.SUPABASE_URL,APP_CONFIG.SUPABASE_ANON_KEY);
-  const {data:{session}}=await sb.auth.getSession();
+  sb=supabase.createClient(APP_CONFIG.SUPABASE_URL,APP_CONFIG.SUPABASE_ANON_KEY,{
+    auth:{
+      persistSession:true,
+      autoRefreshToken:true,
+      detectSessionInUrl:true,
+      storage:window.localStorage
+    }
+  });
+  const session=await clearExpiredDailySession();
   if(session) await enterApp(session.user);
-  sb.auth.onAuthStateChange(async(_,session)=>{if(session)await enterApp(session.user);else showLogin()});
+  sb.auth.onAuthStateChange(async(_,session)=>{
+    if(session){
+      markSessionForToday();
+      await enterApp(session.user);
+    }else{
+      localStorage.removeItem(SESSION_DAY_KEY);
+      showLogin();
+    }
+  });
 }
 
 const IDENTITY_CONFIG={
@@ -649,8 +786,10 @@ async function signIn(){
   }
   $('loginPassword').value='';
   $('loginMsg').textContent='';
+  markSessionForToday();
 }
 async function signOut(){
+  localStorage.removeItem(SESSION_DAY_KEY);
   await sb.auth.signOut();
 }
 function showLogin(){
@@ -1092,9 +1231,75 @@ function renderDashboard(){
   $('thisWeekOwnerTasks').innerHTML=owners.map(owner=>ownerWeekCard(owner,thisWeek.filter(t=>t.owner_name===owner))).join('');
   $('nextWeekOwnerTasks').innerHTML=owners.map(owner=>ownerWeekCard(owner,nextWeek.filter(t=>t.owner_name===owner))).join('');
 }
+
+let mobileTimelineMode='cards';
+function setMobileTimelineMode(mode){
+  mobileTimelineMode=mode;
+  const shell=$('timelineShell');
+  const list=$('mobileTaskList');
+  const cardBtn=$('mobileCardViewBtn');
+  const ganttBtn=$('mobileGanttViewBtn');
+  if(!shell||!list)return;
+  shell.classList.toggle('mobile-card-mode',mode==='cards');
+  shell.classList.toggle('mobile-gantt-mode',mode==='gantt');
+  list.classList.toggle('mobile-card-mode',mode==='cards');
+  list.classList.toggle('mobile-gantt-mode',mode==='gantt');
+  cardBtn?.classList.toggle('active',mode==='cards');
+  ganttBtn?.classList.toggle('active',mode==='gantt');
+}
+function monthPosition(dateString){
+  if(!dateString)return 0;
+  const start=new Date('2026-07-01T00:00:00');
+  const end=new Date('2027-03-01T00:00:00');
+  const target=dateObj(dateString);
+  if(!target)return 0;
+  const total=end-start;
+  return Math.max(0,Math.min(100,((target-start)/total)*100));
+}
+function renderMobileTaskCards(list){
+  const box=$('mobileTaskList');
+  if(!box)return;
+  box.innerHTML=list.length?list.map(t=>{
+    const startPos=monthPosition(t.start_date);
+    const endPos=monthPosition(t.due_date);
+    const width=Math.max(1,endPos-startPos);
+    return `<div class="mobile-task-card">
+      <div class="mobile-task-card-head">
+        <div>
+          <h4>${esc(t.title)}</h4>
+          <div class="muted">${esc(t.team||'')}｜${esc(t.category||'')}</div>
+        </div>
+        <span class="badge ${statusClass(t.status)}">${esc(t.status)}</span>
+      </div>
+      <div class="mobile-task-meta">
+        <div><b>負責人</b>${esc(t.owner_name||'未指派')}</div>
+        <div><b>優先順序</b>${esc(t.priority||'')}</div>
+        <div><b>開始日期</b>${fmt(t.start_date)||'未設定'}</div>
+        <div><b>Deadline</b>${fmt(t.due_date)||'未設定'}</div>
+      </div>
+      <button type="button" class="btn soft" onclick="openTaskDrawer('${t.id}')">查看／編輯任務</button>
+      <div class="mobile-mini-timeline">
+        <div class="mobile-mini-timeline-inner">
+          <div class="mobile-mini-months">
+            <span>7月</span><span>8月</span><span>9月</span><span>10月</span>
+            <span>11月</span><span>12月</span><span>1月</span><span>2月</span>
+          </div>
+          <div class="mobile-mini-bar-area">
+            <div class="mobile-mini-grid">${'<span></span>'.repeat(8)}</div>
+            <div class="mobile-mini-bar ${statusClass(t.status)}" style="left:${startPos}%;width:${width}%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="mobile-scroll-hint">時間軸可左右滑動</div>
+    </div>`;
+  }).join(''):'<div class="empty">沒有符合條件的任務</div>';
+}
+
 function renderTimeline(){
   const q=($('timelineSearch').value||'').toLowerCase(),o=$('timelineOwner').value,team=$('timelineTeam').value,status=$('timelineStatus').value;
   const list=tasks.filter(t=>(!o||t.owner_name===o)&&(!team||t.team===team)&&(!status||t.status===status)&&(!q||Object.values(t).join(' ').toLowerCase().includes(q)));
+  renderMobileTaskCards(list);
+  if(window.innerWidth<=760)setMobileTimelineMode(mobileTimelineMode||'cards');
   const weeks=[];for(let x=new Date('2026-07-06');x<=new Date('2027-02-28');x.setDate(x.getDate()+7))weeks.push(new Date(x));
   $('timelineHead').innerHTML='<tr><th class="task">任務</th><th class="owner">負責人</th>'+weeks.map(w=>`<th class="week">${w.getMonth()+1}/${w.getDate()}</th>`).join('')+'</tr>';
   $('timelineBody').innerHTML=list.map(t=>{const s=dateObj(t.start_date),e=dateObj(t.due_date);return `<tr><td class="task"><button class="task-link" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button><div class="muted">${esc(t.team)}｜${esc(t.status)}</div></td><td class="owner">${esc(t.owner_name)}</td>`+weeks.map(w=>{const we=new Date(w);we.setDate(we.getDate()+6);return `<td class="week">${s&&e&&w<=e&&we>=s?`<div class="bar ${statusClass(t.status)}"></div>`:''}</td>`}).join('')+'</tr>'}).join('');
