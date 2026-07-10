@@ -111,6 +111,15 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 }
 </style>
 
+
+<style>
+.draft-banner{
+  display:none;margin:10px 0;padding:10px 12px;border-radius:12px;
+  background:#fff7df;border:1px solid #ead7a0;color:#6f581f;font-size:13px
+}
+.draft-banner.show{display:flex;align-items:center;justify-content:space-between;gap:10px}
+</style>
+
 </head>
 <body>
 
@@ -181,15 +190,15 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
         </div>
         <div>
           <span id="meetingSaveState" class="save-state saved">已同步</span>
-          <button class="btn soft" onclick="addMeetingSection()">＋新增大項</button>
-          <button class="btn primary" onclick="saveWholeMeeting()">儲存全部並同步</button>
+          <button type="button" class="btn soft" onclick="addMeetingSection()">＋新增大項</button>
+          <button type="button" class="btn primary" onclick="saveWholeMeeting()">儲存全部並同步</button>
         </div>
       </div>
 
       <div class="filters">
         <label>選擇會議週 <input type="date" id="meetingWeek" onchange="changeMeetingWeek()"></label>
-        <button class="btn soft" onclick="addDefaultSections()">載入常用大項</button>
-        <button class="btn soft" onclick="refreshMeetingSafely()">重新載入</button>
+        <button type="button" class="btn soft" onclick="addDefaultSections()">載入常用大項</button>
+        <button type="button" class="btn soft" onclick="refreshMeetingSafely()">重新載入</button>
       </div>
     </div>
 
@@ -203,6 +212,10 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
       <label><span>會議狀態</span><select id="meetingCompletion" oninput="markMeetingDirty()"><option value="">進行中</option><option value="completed">已完成</option></select></label>
     </div>
 
+    <div id="meetingDraftBanner" class="draft-banner">
+      <span>偵測到尚未送出的會議草稿，已自動保留。</span>
+      <button type="button" class="btn soft" onclick="clearMeetingDraft()">清除草稿</button>
+    </div>
     <div class="meeting-overview">
       <div><strong id="onePageSectionCount">0</strong><span class="muted">討論大項</span></div>
       <div><strong id="onePageActionCount">0</strong><span class="muted">待辦事項</span></div>
@@ -274,6 +287,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 let sb, currentUser, currentProfile;
 let tasks=[], meetings=[], summaries=[], meetingActions=[];
 let meetingDirty=false, removedMeetingIds=[], removedActionIds=[];
+const MEETING_DRAFT_PREFIX='huasendao_meeting_draft_';
 
 const activityDate=new Date('2027-02-27T00:00:00');
 const $=id=>document.getElementById(id);
@@ -387,12 +401,102 @@ function markMeetingDirty(){
   const el=$('meetingSaveState');
   if(el){el.textContent='尚未儲存';el.className='save-state dirty';}
   updateOnePageCounts();
+  scheduleMeetingDraftSave();
 }
 function markMeetingSaved(){
   meetingDirty=false;removedMeetingIds=[];removedActionIds=[];
   const el=$('meetingSaveState');
   if(el){el.textContent='已同步';el.className='save-state saved';}
 }
+
+let meetingDraftTimer=null;
+function meetingDraftKey(){
+  return MEETING_DRAFT_PREFIX+($('meetingWeek')?.value||monday());
+}
+function scheduleMeetingDraftSave(){
+  clearTimeout(meetingDraftTimer);
+  meetingDraftTimer=setTimeout(saveMeetingDraft,250);
+}
+function collectMeetingDraft(){
+  const sections=[...document.querySelectorAll('.meeting-row')].map(row=>({
+    id:row.dataset.meetingId||'',
+    category:row.querySelector('.section-category').value,
+    topic:row.querySelector('.section-topic').value,
+    owner:row.querySelector('.meeting-owner').value,
+    status:row.querySelector('.section-status').value,
+    content:row.querySelector('.section-content').value,
+    decision:row.querySelector('.section-decision').value,
+    actions:[...row.querySelectorAll('.action-row')].map(a=>({
+      id:a.dataset.actionId||'',
+      taskId:a.dataset.taskId||'',
+      sync:a.querySelector('.action-sync').checked,
+      title:a.querySelector('.action-title').value,
+      owner:a.querySelector('.action-owner').value,
+      team:a.querySelector('.action-team').value,
+      due:a.querySelector('.action-due').value,
+      priority:a.querySelector('.action-priority').value
+    }))
+  }));
+  return {
+    week:$('meetingWeek').value,
+    meta:{
+      title:$('meetingTitle').value,date:$('meetingDate').value,time:$('meetingTime').value,
+      link:$('meetingLink').value,attendees:$('meetingAttendees').value,
+      recorder:$('meetingRecorder').value,completion:$('meetingCompletion').value,
+      decision:$('meetingDecision').value,risk:$('meetingRisk').value,goal:$('meetingGoal').value
+    },
+    sections
+  };
+}
+function saveMeetingDraft(){
+  try{
+    localStorage.setItem(meetingDraftKey(),JSON.stringify(collectMeetingDraft()));
+  }catch(e){console.warn('draft save failed',e)}
+}
+function clearMeetingDraft(){
+  localStorage.removeItem(meetingDraftKey());
+  $('meetingDraftBanner')?.classList.remove('show');
+}
+function restoreMeetingDraft(draft){
+  if(!draft)return false;
+  const m=draft.meta||{};
+  $('meetingTitle').value=m.title||'';
+  $('meetingDate').value=m.date||defaultMeetingDate(draft.week);
+  $('meetingTime').value=m.time||'';
+  $('meetingLink').value=m.link||'';
+  $('meetingAttendees').value=m.attendees||'';
+  $('meetingRecorder').value=m.recorder||'邦妮';
+  $('meetingCompletion').value=m.completion||'';
+  $('meetingDecision').value=m.decision||'';
+  $('meetingRisk').value=m.risk||'';
+  $('meetingGoal').value=m.goal||'';
+
+  const editor=$('onePageMeetingEditor');
+  editor.innerHTML='';
+  (draft.sections||[]).forEach((s,i)=>{
+    const row=document.createElement('div');
+    row.innerHTML=meetingRowHtml({
+      id:s.id||'',type:s.category,status:s.status,topic:s.topic,
+      owner_name:s.owner,discussion_content:s.content,decision:s.decision
+    },i);
+    const el=row.firstElementChild;
+    el.dataset.meetingId=s.id||'';
+    const table=el.querySelector('.action-table');
+    table.innerHTML=(s.actions||[]).map(a=>actionRowHtml({
+      id:a.id||'',linked_task_id:a.taskId||'',sync_to_gantt:a.sync,
+      title:a.title,owner_name:a.owner,team:a.team,due_date:a.due,priority:a.priority
+    })).join('');
+    editor.appendChild(el);
+  });
+  if(!editor.children.length)addMeetingSection('活動介紹');
+  $('meetingDraftBanner')?.classList.add('show');
+  renumberMeetingRows();updateOnePageCounts();
+  meetingDirty=true;
+  const state=$('meetingSaveState');
+  if(state){state.textContent='已恢復未儲存草稿';state.className='save-state dirty';}
+  return true;
+}
+
 function changeMeetingWeek(){
   if(meetingDirty && !confirm('目前有尚未儲存的內容，確定切換會議週？')) return;
   meetingDirty=false;removedMeetingIds=[];removedActionIds=[];
@@ -423,7 +527,7 @@ function addDefaultSections(){
 function buildTemplateMenu(){
   const box=$('meetingTemplateMenu');
   if(!box)return;
-  box.innerHTML=MEETING_CATEGORIES.map(c=>`<button class="template-chip" onclick="addMeetingSection('${esc(c)}')">${esc(c)}</button>`).join('');
+  box.innerHTML=MEETING_CATEGORIES.map(c=>`<button type="button" class="template-chip" onclick="addMeetingSection('${esc(c)}')">${esc(c)}</button>`).join('');
 }
 function actionRowHtml(action={}){
   const task=action.linked_task_id?tasks.find(t=>t.id===action.linked_task_id):null;
@@ -439,7 +543,7 @@ function actionRowHtml(action={}){
       ${['高','中','低'].map(v=>`<option ${action.priority===v?'selected':''}>${v}</option>`).join('')}
     </select>
     <div class="action-task-badge">${task?'已進甘特':''}</div>
-    <button class="btn danger" title="刪除待辦" onclick="removeActionRow(this)">×</button>
+    <button type="button" class="btn danger" title="刪除待辦" onclick="removeActionRow(this)">×</button>
   </div>`;
 }
 function meetingRowHtml(m={},index=0){
@@ -455,7 +559,7 @@ function meetingRowHtml(m={},index=0){
       <select class="section-status" onchange="markMeetingDirty()">
         ${['待討論','已決議','追蹤中','已結案'].map(v=>`<option ${m.status===v?'selected':''}>${v}</option>`).join('')}
       </select>
-      <button class="btn danger" onclick="removeMeetingSection(this)">刪除大項</button>
+      <button type="button" class="btn danger" onclick="removeMeetingSection(this)">刪除大項</button>
     </div>
     <div class="meeting-row-body">
       <div class="record-field"><label><span>討論內容</span><textarea class="section-content" placeholder="邦妮可持續記錄討論內容、背景、不同人的意見與補充…" oninput="markMeetingDirty()">${esc(detail.content)}</textarea></label></div>
@@ -464,7 +568,7 @@ function meetingRowHtml(m={},index=0){
     <div class="action-panel">
       <div class="action-panel-head">
         <div><b>待辦事項</b><div class="muted">勾選最左側方框，即代表儲存時要同步成甘特任務。</div></div>
-        <button class="btn soft" onclick="addActionRow(this)">＋新增待辦</button>
+        <button type="button" class="btn soft" onclick="addActionRow(this)">＋新增待辦</button>
       </div>
       <div class="action-table">${actions.map(actionRowHtml).join('')}</div>
     </div>
@@ -476,11 +580,16 @@ function meetingRowHtml(m={},index=0){
 }
 function addMeetingSection(category='其他'){
   const editor=$('onePageMeetingEditor');
+  if(!editor)return;
   const shell=document.createElement('div');
   shell.innerHTML=meetingRowHtml({type:category,status:'待討論'},editor.children.length);
-  editor.appendChild(shell.firstElementChild);
+  const newRow=shell.firstElementChild;
+  if(!newRow)return;
+  editor.appendChild(newRow);
+  renumberMeetingRows();
   markMeetingDirty();
-  setTimeout(()=>editor.lastElementChild.querySelector('.section-topic').focus(),30);
+  newRow.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(()=>newRow.querySelector('.section-topic')?.focus({preventScroll:true}),80);
 }
 function removeMeetingSection(btn){
   const row=btn.closest('.meeting-row');
@@ -529,11 +638,25 @@ function renderMeeting(){
   const week=$('meetingWeek').value||monday();
   $('meetingWeek').value=week;
   buildTemplateMenu();
+
+  let draft=null;
+  try{draft=JSON.parse(localStorage.getItem(meetingDraftKey())||'null')}catch(e){}
+  if(draft && draft.sections && draft.sections.length){
+    restoreMeetingDraft(draft);
+    return;
+  }
+
+  $('meetingDraftBanner')?.classList.remove('show');
   const summary=summaries.find(x=>x.week_start===week)||null;
   loadMeetingMeta(summary,week);
   const records=meetings.filter(m=>m.week_start===week).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
   $('onePageMeetingEditor').innerHTML=records.map(meetingRowHtml).join('');
-  if(!records.length)addMeetingSection('活動介紹');
+  if(!records.length){
+    const editor=$('onePageMeetingEditor');
+    const shell=document.createElement('div');
+    shell.innerHTML=meetingRowHtml({type:'活動介紹',status:'待討論'},0);
+    editor.appendChild(shell.firstElementChild);
+  }
   renumberMeetingRows();updateOnePageCounts();markMeetingSaved();
 }
 async function saveActionItem(actionEl,meetingId){
@@ -640,6 +763,7 @@ async function saveWholeMeeting(){
       if(r.error)throw r.error;
     }
 
+    clearMeetingDraft();
     markMeetingSaved();
     toast('整份會議紀錄與甘特任務已同步');
     await loadAll();
