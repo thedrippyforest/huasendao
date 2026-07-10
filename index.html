@@ -6,6 +6,7 @@
 <title>花森島｜好好吃頓飯 Project Hub</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./config.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 :root{--forest:#315948;--deep:#203f34;--sage:#aec4b4;--mint:#eaf2ed;--cream:#f6f1e7;--paper:#fffdf8;--ink:#3e3a35;--muted:#777168;--red:#c96961;--amber:#d4aa4d;--green:#7fa18a;--line:#e7dfd3;--shadow:0 10px 28px rgba(36,65,52,.10)}
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif;background:#f5f2eb;color:var(--ink)}button,input,select,textarea{font:inherit}button{cursor:pointer}
@@ -360,7 +361,10 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
       <h1>今天與接下來</h1>
       <div class="muted">依小美、maomao、若C整理這週與下週的任務，點任務即可查看完整內容。</div>
     </div>
-    <button class="btn primary" onclick="openTaskDrawer()">＋新增工作</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <button type="button" id="exportWorkbookBtn" class="btn soft" onclick="exportProjectWorkbook()">匯出完整試算表</button>
+      <button type="button" class="btn primary" onclick="openTaskDrawer()">＋新增工作</button>
+    </div>
   </div>
 
   <div class="grid kpis">
@@ -761,6 +765,278 @@ function ownerTaskGroupHtml(owner,items,showCheckbox=true){
       </div>`).join(''):'<div class="owner-empty">目前沒有工作</div>'
     }</div>
   </div>`;
+}
+
+
+function exportDateLabel(value){
+  if(!value)return '';
+  return String(value).slice(0,10);
+}
+function exportDateTimeLabel(value){
+  if(!value)return '';
+  try{return new Date(value).toLocaleString('zh-TW',{hour12:false})}
+  catch(e){return String(value)}
+}
+function exportProfileName(id){
+  return profiles.find(p=>p.id===id)?.display_name||'';
+}
+function exportMeetingDetail(meeting){
+  if(meeting.discussion_content!==undefined && meeting.discussion_content!==null){
+    return {content:meeting.discussion_content||'',decision:meeting.decision||''};
+  }
+  if(!meeting.decision)return {content:'',decision:''};
+  try{
+    const parsed=JSON.parse(meeting.decision);
+    return {content:parsed.content||'',decision:parsed.decision||''};
+  }catch(e){
+    return {content:'',decision:String(meeting.decision||'')};
+  }
+}
+function exportWeekBounds(){
+  const now=new Date();now.setHours(0,0,0,0);
+  const day=now.getDay()||7;
+  const thisStart=new Date(now);thisStart.setDate(now.getDate()-day+1);
+  const thisEnd=new Date(thisStart);thisEnd.setDate(thisStart.getDate()+6);thisEnd.setHours(23,59,59,999);
+  const nextStart=new Date(thisStart);nextStart.setDate(thisStart.getDate()+7);
+  const nextEnd=new Date(nextStart);nextEnd.setDate(nextStart.getDate()+6);nextEnd.setHours(23,59,59,999);
+  return {now,thisStart,thisEnd,nextStart,nextEnd};
+}
+function exportSheet(workbook,name,rows,widths=[]){
+  const safeRows=rows.length?rows:[{'資料':'目前沒有資料'}];
+  const worksheet=XLSX.utils.json_to_sheet(safeRows);
+  worksheet['!autofilter']={ref:worksheet['!ref']};
+  worksheet['!cols']=widths.length?widths.map(w=>({wch:w})):[];
+  XLSX.utils.book_append_sheet(workbook,worksheet,name.slice(0,31));
+}
+async function exportProjectWorkbook(){
+  const button=$('exportWorkbookBtn');
+  if(!window.XLSX){
+    alert('試算表工具尚未載入，請確認網路連線後再試一次。');
+    return;
+  }
+
+  button.disabled=true;
+  const originalText=button.textContent;
+  button.textContent='整理資料中…';
+
+  try{
+    // Re-read the latest Supabase data before exporting.
+    const [{data:latestTasks,error:taskError},{data:latestMeetings,error:meetingError},
+           {data:latestSummaries,error:summaryError},{data:latestActions,error:actionError},
+           {data:latestProfiles,error:profileError}]=await Promise.all([
+      sb.from('tasks').select('*').order('due_date',{ascending:true}),
+      sb.from('meetings').select('*').order('week_start',{ascending:false}).order('sort_order',{ascending:true}),
+      sb.from('meeting_summaries').select('*').order('week_start',{ascending:false}),
+      sb.from('meeting_action_items').select('*').order('created_at',{ascending:true}),
+      sb.from('profiles').select('*')
+    ]);
+    const firstError=taskError||meetingError||summaryError||actionError||profileError;
+    if(firstError)throw firstError;
+
+    const exportTasks=latestTasks||[];
+    const exportMeetings=latestMeetings||[];
+    const exportSummaries=latestSummaries||[];
+    const exportActions=latestActions||[];
+    const exportProfiles=latestProfiles||profiles||[];
+    const profileName=id=>exportProfiles.find(p=>p.id===id)?.display_name||'';
+
+    const workbook=XLSX.utils.book_new();
+    workbook.Props={
+      Title:'花森島《好好吃頓飯》專案資料',
+      Subject:'任務、會議與專案追蹤資料',
+      Author:currentProfile?.display_name||'花森島',
+      CreatedDate:new Date()
+    };
+
+    // Sheet 1: 任務時程總表
+    const taskRows=exportTasks.map(t=>({
+      '任務編號':t.code||'',
+      '團隊':t.team||'',
+      '大分類':t.category||'',
+      '子分類':t.subcategory||'',
+      '任務名稱':t.title||'',
+      '負責人':t.owner_name||'',
+      '開始日期':exportDateLabel(t.start_date),
+      'Deadline':exportDateLabel(t.due_date),
+      '優先順序':t.priority||'',
+      '任務狀態':t.status||'',
+      '完成率':Number(t.progress||0)/100,
+      '前置任務':Array.isArray(t.dependency_codes)?t.dependency_codes.join('、'):'',
+      '里程碑':t.milestone||'',
+      '備註':t.notes||'',
+      '建立者':profileName(t.created_by),
+      '建立時間':exportDateTimeLabel(t.created_at),
+      '最後修改者':profileName(t.updated_by),
+      '最後修改時間':exportDateTimeLabel(t.updated_at)
+    }));
+    const taskSheet=XLSX.utils.json_to_sheet(taskRows.length?taskRows:[{'資料':'目前沒有任務'}]);
+    taskSheet['!autofilter']={ref:taskSheet['!ref']};
+    taskSheet['!cols']=[12,16,16,16,38,14,12,12,10,10,10,18,14,36,14,20,14,20].map(w=>({wch:w}));
+    taskRows.forEach((_,index)=>{
+      const cell=taskSheet[`K${index+2}`];
+      if(cell)cell.z='0%';
+    });
+    XLSX.utils.book_append_sheet(workbook,taskSheet,'任務時程總表');
+
+    // Sheet 2: 本週與下週任務
+    const {thisStart,thisEnd,nextStart,nextEnd}=exportWeekBounds();
+    const ownerOrder=['小美','maomao','若C','邦尼','三方共同'];
+    const weeklyRows=[];
+    exportTasks.filter(t=>t.status!=='已完成').forEach(t=>{
+      const due=dateObj(t.due_date),start=dateObj(t.start_date);
+      let week='';
+      if((due&&due>=thisStart&&due<=thisEnd)||(start&&start>=thisStart&&start<=thisEnd))week='本週';
+      else if((due&&due>=nextStart&&due<=nextEnd)||(start&&start>=nextStart&&start<=nextEnd))week='下週';
+      if(week)weeklyRows.push({
+        '週別':week,
+        '負責人':t.owner_name||'未指派',
+        '任務名稱':t.title||'',
+        '開始日期':exportDateLabel(t.start_date),
+        'Deadline':exportDateLabel(t.due_date),
+        '狀態':t.status||'',
+        '優先順序':t.priority||'',
+        '團隊':t.team||''
+      });
+    });
+    weeklyRows.sort((a,b)=>{
+      const aw=a['週別']==='本週'?0:1,bw=b['週別']==='本週'?0:1;
+      if(aw!==bw)return aw-bw;
+      const ao=ownerOrder.indexOf(a['負責人']),bo=ownerOrder.indexOf(b['負責人']);
+      if(ao!==bo)return (ao<0?999:ao)-(bo<0?999:bo);
+      return String(a.Deadline).localeCompare(String(b.Deadline));
+    });
+    exportSheet(workbook,'本週與下週任務',weeklyRows,[8,14,40,12,12,10,10,16]);
+
+    // Sheet 3: 會議總表
+    const summaryRows=exportSummaries.map(s=>({
+      '會議日期':exportDateLabel(s.meeting_date)||exportDateLabel(s.week_start),
+      '會議週':exportDateLabel(s.week_start),
+      '會議主題':s.meeting_title||'',
+      '會議時間':s.meeting_time||'',
+      '地點／連結':s.meeting_link||'',
+      '與會人員':s.attendees||'',
+      '紀錄人':s.recorder||'',
+      '重要決策':s.important_decisions||'',
+      '風險與協調事項':s.risks||'',
+      '下次會議／臨時動議':s.goal||'',
+      '會議狀態':s.completed_at?'已完成':'進行中',
+      '最後修改者':profileName(s.updated_by),
+      '最後修改時間':exportDateTimeLabel(s.updated_at)
+    }));
+    exportSheet(workbook,'會議總表',summaryRows,[12,12,28,10,30,32,12,40,40,40,10,14,20]);
+
+    // Sheet 4: 會議討論紀錄
+    const discussionRows=exportMeetings.map(m=>{
+      const summary=exportSummaries.find(s=>s.week_start===m.week_start);
+      const detail=exportMeetingDetail(m);
+      return {
+        '會議日期':exportDateLabel(summary?.meeting_date)||exportDateLabel(m.week_start),
+        '會議主題':summary?.meeting_title||'',
+        '大項':m.type||'',
+        '討論主題':m.topic||'',
+        '討論內容':detail.content,
+        '決議／結論':detail.decision,
+        '狀態':m.status||'',
+        '排序':m.sort_order??'',
+        '建立者':profileName(m.created_by),
+        '建立時間':exportDateTimeLabel(m.created_at),
+        '最後修改者':profileName(m.updated_by),
+        '最後修改時間':exportDateTimeLabel(m.updated_at)
+      };
+    });
+    exportSheet(workbook,'會議討論紀錄',discussionRows,[12,28,16,32,50,50,10,8,14,20,14,20]);
+
+    // Sheet 5: 會議待辦事項
+    const actionRows=exportActions.map(a=>{
+      const meeting=exportMeetings.find(m=>m.id===a.meeting_id);
+      const summary=exportSummaries.find(s=>s.week_start===meeting?.week_start);
+      const linkedTask=exportTasks.find(t=>t.id===a.linked_task_id);
+      return {
+        '會議日期':exportDateLabel(summary?.meeting_date)||exportDateLabel(meeting?.week_start),
+        '會議主題':summary?.meeting_title||'',
+        '所屬大項':meeting?.type||'',
+        '討論主題':meeting?.topic||'',
+        '待辦事項':a.title||'',
+        '負責人':a.owner_name||'',
+        '團隊':a.team||'',
+        'Deadline':exportDateLabel(a.due_date),
+        '優先順序':a.priority||'',
+        '同步任務時程總表':a.sync_to_gantt?'是':'否',
+        '連動任務狀態':linkedTask?.status||'',
+        '連動任務完成率':linkedTask?Number(linkedTask.progress||0)/100:'',
+        '建立者':profileName(a.created_by),
+        '建立時間':exportDateTimeLabel(a.created_at),
+        '最後修改者':profileName(a.updated_by),
+        '最後修改時間':exportDateTimeLabel(a.updated_at)
+      };
+    });
+    const actionSheet=XLSX.utils.json_to_sheet(actionRows.length?actionRows:[{'資料':'目前沒有會議待辦'}]);
+    actionSheet['!autofilter']={ref:actionSheet['!ref']};
+    actionSheet['!cols']=[12,28,16,30,40,14,16,12,10,16,12,12,14,20,14,20].map(w=>({wch:w}));
+    actionRows.forEach((_,index)=>{
+      const cell=actionSheet[`L${index+2}`];
+      if(cell&&typeof cell.v==='number')cell.z='0%';
+    });
+    XLSX.utils.book_append_sheet(workbook,actionSheet,'會議待辦事項');
+
+    // Sheet 6: 專案經理追蹤
+    const now=new Date();now.setHours(0,0,0,0);
+    const end14=new Date(now);end14.setDate(now.getDate()+14);
+    const trackingRows=[];
+    exportTasks.filter(t=>t.status!=='已完成').forEach(t=>{
+      const due=dateObj(t.due_date),start=dateObj(t.start_date);
+      if(due&&due<now){
+        trackingRows.push({'追蹤類型':'逾期未完成','任務名稱':t.title,'負責人':t.owner_name,'日期':exportDateLabel(t.due_date),'狀態':t.status,'優先順序':t.priority,'團隊':t.team});
+      }
+      if(due&&due>=now&&due<=end14){
+        trackingRows.push({'追蹤類型':'本週與下週到期','任務名稱':t.title,'負責人':t.owner_name,'日期':exportDateLabel(t.due_date),'狀態':t.status,'優先順序':t.priority,'團隊':t.team});
+      }
+      if(t.status==='未開始'&&start&&start<=end14){
+        trackingRows.push({'追蹤類型':'時間接近但尚未開始','任務名稱':t.title,'負責人':t.owner_name,'日期':exportDateLabel(t.start_date),'狀態':t.status,'優先順序':t.priority,'團隊':t.team});
+      }
+      if(t.status==='待確認'){
+        trackingRows.push({'追蹤類型':'等待確認','任務名稱':t.title,'負責人':t.owner_name,'日期':exportDateLabel(t.due_date),'狀態':t.status,'優先順序':t.priority,'團隊':t.team});
+      }
+    });
+    trackingRows.sort((a,b)=>String(a['追蹤類型']).localeCompare(String(b['追蹤類型']))||String(a['日期']).localeCompare(String(b['日期'])));
+    exportSheet(workbook,'專案經理追蹤',trackingRows,[20,42,14,12,10,10,16]);
+
+    // Sheet 7: 編輯資訊
+    const editRows=exportTasks.map(t=>({
+      '資料類型':'任務',
+      '資料名稱':t.title||'',
+      '建立者':profileName(t.created_by),
+      '建立時間':exportDateTimeLabel(t.created_at),
+      '最後修改者':profileName(t.updated_by),
+      '最後修改時間':exportDateTimeLabel(t.updated_at)
+    })).concat(exportMeetings.map(m=>({
+      '資料類型':'會議討論',
+      '資料名稱':m.topic||'',
+      '建立者':profileName(m.created_by),
+      '建立時間':exportDateTimeLabel(m.created_at),
+      '最後修改者':profileName(m.updated_by),
+      '最後修改時間':exportDateTimeLabel(m.updated_at)
+    }))).concat(exportActions.map(a=>({
+      '資料類型':'會議待辦',
+      '資料名稱':a.title||'',
+      '建立者':profileName(a.created_by),
+      '建立時間':exportDateTimeLabel(a.created_at),
+      '最後修改者':profileName(a.updated_by),
+      '最後修改時間':exportDateTimeLabel(a.updated_at)
+    })));
+    exportSheet(workbook,'編輯資訊',editRows,[14,42,14,20,14,20]);
+
+    const stamp=new Date();
+    const fileDate=`${stamp.getFullYear()}${String(stamp.getMonth()+1).padStart(2,'0')}${String(stamp.getDate()).padStart(2,'0')}`;
+    XLSX.writeFile(workbook,`花森島_好好吃頓飯_專案資料_${fileDate}.xlsx`);
+    toast('完整試算表已下載');
+  }catch(error){
+    console.error(error);
+    alert('匯出失敗：'+(error.message||String(error)));
+  }finally{
+    button.disabled=false;
+    button.textContent=originalText;
+  }
 }
 
 function weekBounds(reference=new Date()){
