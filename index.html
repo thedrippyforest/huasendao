@@ -122,31 +122,6 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 
 
 <style>
-/* 迷你會議月曆 */
-.meeting-title-area{display:block}
-.compact-calendar-wrap{
-  width:250px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:9px 10px;
-  box-shadow:0 4px 12px rgba(36,65,52,.05)
-}
-.compact-calendar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.compact-calendar-title{font-size:13px;font-weight:700;color:var(--deep)}
-.mini-nav{border:0;background:var(--mint);color:var(--deep);width:26px;height:26px;border-radius:8px;font-weight:800}
-.compact-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.calendar-weekday{text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:2px}
-.calendar-day{
-  min-height:28px;border:0;background:transparent;border-radius:8px;padding:2px;
-  text-align:center;position:relative;cursor:pointer;font-size:11px
-}
-.calendar-day:hover{background:var(--mint)}
-.calendar-day.other-month{opacity:.28}
-.calendar-day.selected{background:var(--forest);color:#fff}
-.calendar-day.has-meeting::after{
-  content:"";position:absolute;left:50%;bottom:2px;transform:translateX(-50%);
-  width:5px;height:5px;border-radius:50%;background:var(--amber)
-}
-.calendar-day.selected.has-meeting::after{background:#fff}
-.calendar-day .day-number{font-weight:700}
-.calendar-day .meeting-label{display:none}
 /* 任務狀態圖例 */
 .timeline-legend{
   display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:10px 0;padding:10px 12px;
@@ -241,7 +216,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 }
 .meeting-toolbar-main{
   display:grid;
-  grid-template-columns:minmax(260px,1fr) 250px auto;
+  grid-template-columns:minmax(260px,1fr) 260px auto;
   gap:16px;
   align-items:start;
 }
@@ -272,6 +247,21 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
   .meeting-toolbar-main{grid-template-columns:1fr}
   .compact-calendar-wrap{width:100%;max-width:280px}
   .compact-meeting-meta{grid-template-columns:1fr 1fr}
+}
+</style>
+
+
+<style>
+.recorded-meeting-picker{
+  background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 10px;
+  align-self:start
+}
+.recorded-meeting-picker label span{
+  display:block;font-size:11px;font-weight:700;color:var(--deep);margin-bottom:5px
+}
+.recorded-meeting-picker select{width:100%;padding:7px 8px}
+@media(max-width:1050px){
+  .recorded-meeting-picker{max-width:320px}
 }
 </style>
 
@@ -379,14 +369,15 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
       <div class="muted">需要執行的待辦可同步進任務時程總表</div>
     </div>
 
-    <div class="compact-calendar-wrap">
-      <div class="compact-calendar-head">
-        <button type="button" class="mini-nav" onclick="changeMeetingCalendarMonth(-1)">‹</button>
-        <div id="meetingCalendarTitle" class="compact-calendar-title"></div>
-        <button type="button" class="mini-nav" onclick="changeMeetingCalendarMonth(1)">›</button>
-      </div>
-      <div class="compact-calendar-grid" id="meetingCalendar"></div>
-    </div>
+    
+<div class="recorded-meeting-picker">
+  <label>
+    <span>已有會議記錄</span>
+    <select id="recordedMeetingDates" onchange="openRecordedMeetingDate(this.value)">
+      <option value="">選擇日期快速查看</option>
+    </select>
+  </label>
+</div>
 
     <div class="meeting-toolbar-actions">
       <span id="meetingSaveState" class="save-state saved">已同步</span>
@@ -403,7 +394,7 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 
 <div class="meeting-meta compact-meeting-meta">
       <label class="wide"><span>會議主題</span><input id="meetingTitle" placeholder="例如：整體活動討論分享" oninput="markMeetingDirty()"></label>
-      <label><span>會議日期</span><input type="date" id="meetingDate" oninput="markMeetingDirty()"></label>
+      <label><span>會議日期</span><input type="date" id="meetingDate" oninput="markMeetingDirty()" onchange="renderRecordedMeetingDates()"></label>
       <label><span>會議時間</span><input type="time" id="meetingTime" oninput="markMeetingDirty()"></label>
       <label class="wide"><span>會議地點／連結</span><input id="meetingLink" placeholder="Google Meet 或實體地點" oninput="markMeetingDirty()"></label>
       <label class="wide"><span>與會人員</span><input id="meetingAttendees" placeholder="小花果（小美）、滴滴兒森（茂玲）、物物島（若曦）、邦妮" oninput="markMeetingDirty()"></label>
@@ -927,72 +918,59 @@ function loadMeetingMeta(summary,week){
   $('meetingGoal').value=summary?.goal||'';
 }
 
-let meetingCalendarCursor=new Date();
 
-function localDateKey(dt){
-  const y=dt.getFullYear();
-  const m=String(dt.getMonth()+1).padStart(2,'0');
-  const d=String(dt.getDate()).padStart(2,'0');
-  return `${y}-${m}-${d}`;
-}
 
-function meetingDateMap(){
-  const map={};
+
+function meetingRecordedDateOptions(){
+  const rows=[];
   summaries.forEach(s=>{
     const date=fmt(s.meeting_date)||fmt(s.week_start);
-    if(date)map[date]=s;
+    if(!date)return;
+    rows.push({
+      date,
+      week:fmt(s.week_start)||date,
+      title:s.meeting_title||'會議記錄'
+    });
   });
   meetings.forEach(m=>{
     const summary=summaries.find(s=>s.week_start===m.week_start);
     const date=fmt(summary?.meeting_date)||fmt(m.week_start);
-    if(date&&!map[date])map[date]={week_start:m.week_start,meeting_date:date,meeting_title:m.topic||'會議記錄'};
+    if(!date)return;
+    if(!rows.some(x=>x.date===date)){
+      rows.push({date,week:fmt(m.week_start)||date,title:m.topic||'會議記錄'});
+    }
   });
-  return map;
+  return rows.sort((a,b)=>b.date.localeCompare(a.date));
 }
-function renderMeetingCalendar(){
-  const box=$('meetingCalendar');if(!box)return;
-  const y=meetingCalendarCursor.getFullYear(),m=meetingCalendarCursor.getMonth();
-  $('meetingCalendarTitle').textContent=`${y}/${String(m+1).padStart(2,'0')}`;
-  const first=new Date(y,m,1),start=new Date(y,m,1-first.getDay());
-  const map=meetingDateMap(),selected=fmt($('meetingDate').value);
-  const weekdays=['日','一','二','三','四','五','六'];
-  let out=weekdays.map(w=>`<div class="calendar-weekday">${w}</div>`).join('');
-  for(let i=0;i<42;i++){
-    const dt=new Date(start);dt.setDate(start.getDate()+i);
-    const key=localDateKey(dt),item=map[key];
-    const other=dt.getMonth()!==m?' other-month':'';
-    const sel=key===selected?' selected':'';
-    out+=`<button type="button" class="calendar-day${other}${sel}${item?' has-meeting':''}" onclick="openMeetingFromCalendar('${key}','${item?.week_start||''}')">
-      <span class="day-number">${dt.getDate()}</span>
-      ${item?`<span class="meeting-label">${esc(item.meeting_title||'會議記錄')}</span>`:''}
-    </button>`;
+function renderRecordedMeetingDates(){
+  const select=$('recordedMeetingDates');
+  if(!select)return;
+  const current=$('meetingDate')?.value||'';
+  const options=meetingRecordedDateOptions();
+  select.innerHTML='<option value="">選擇日期快速查看</option>'+options.map(x=>
+    `<option value="${x.date}|${x.week}" ${x.date===current?'selected':''}>${x.date}｜${esc(x.title)}</option>`
+  ).join('');
+}
+function openRecordedMeetingDate(value){
+  if(!value)return;
+  if(meetingDirty&&!confirm('目前有尚未儲存的內容，確定切換會議？')){
+    renderRecordedMeetingDates();
+    return;
   }
-  box.innerHTML=out;
-}
-function changeMeetingCalendarMonth(delta){
-  meetingCalendarCursor=new Date(meetingCalendarCursor.getFullYear(),meetingCalendarCursor.getMonth()+delta,1);
-  renderMeetingCalendar();
-}
-function goMeetingCalendarToday(){
-  meetingCalendarCursor=new Date();
-  renderMeetingCalendar();
-}
-function openMeetingFromCalendar(date,week){
-  if(meetingDirty&&!confirm('目前有尚未儲存的內容，確定切換會議？'))return;
+  const [date,week]=value.split('|');
   meetingDirty=false;
-  $('meetingWeek').value=week||monday(new Date(date.replace(/-/g,'/')+' 00:00:00'));
+  $('meetingWeek').value=week||date;
   renderMeeting();
   setTimeout(()=>{
     if($('meetingDate'))$('meetingDate').value=date;
-    meetingCalendarCursor=new Date(date.replace(/-/g,'/')+' 00:00:00');
-    renderMeetingCalendar();
+    renderRecordedMeetingDates();
   },0);
 }
 
 function renderMeeting(){
   const week=$('meetingWeek').value||monday();
   $('meetingWeek').value=week;
-  renderMeetingCalendar();
+  
 
   let draft=null;
   try{draft=JSON.parse(localStorage.getItem(meetingDraftKey())||'null')}catch(e){}
@@ -1004,8 +982,8 @@ function renderMeeting(){
   $('meetingDraftBanner')?.classList.remove('show');
   const summary=summaries.find(x=>x.week_start===week)||null;
   loadMeetingMeta(summary,week);
-  if($('meetingDate').value)meetingCalendarCursor=new Date($('meetingDate').value.replace(/-/g,'/')+' 00:00:00');
-  renderMeetingCalendar();
+  renderRecordedMeetingDates();
+  
   const records=meetings.filter(m=>m.week_start===week).sort((a,b)=>{
     const aDone=a.status==='已結案'?1:0,bDone=b.status==='已結案'?1:0;
     if(aDone!==bDone)return aDone-bDone;
