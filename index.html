@@ -28,6 +28,89 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 .meeting-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.meeting-kpis{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:12px;margin:14px 0}.meeting-kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}.meeting-kpi strong{display:block;font-size:24px;color:var(--deep)}.meeting-kpi span{font-size:12px;color:var(--muted)}.meeting-record{position:relative}.meeting-category{display:inline-block;padding:4px 9px;border-radius:999px;background:var(--mint);color:var(--deep);font-size:11px;font-weight:700;margin-bottom:7px}.meeting-content{margin-top:10px;padding:10px 12px;background:#fbfaf6;border-radius:10px;white-space:pre-wrap}.meeting-decision{margin-top:10px;padding:10px 12px;background:#f7f0de;border-left:4px solid var(--amber);border-radius:8px;white-space:pre-wrap}.meeting-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.linked-task .progress{margin-top:7px}.agenda-template{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.agenda-item{border:1px dashed var(--sage);border-radius:12px;padding:11px;background:#fbfdfb}.agenda-item b{display:block;margin-bottom:5px}.followup-board{display:grid;gap:10px}.followup-item{padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}.followup-item.overdue{border-color:#e6b0aa;background:#fff7f6}.followup-item .row{display:flex;justify-content:space-between;gap:8px}@media(max-width:900px){.meeting-kpis{grid-template-columns:repeat(2,1fr)}.agenda-template{grid-template-columns:1fr 1fr}}@media(max-width:620px){.meeting-kpis,.agenda-template{grid-template-columns:1fr}}
 </style>
 
+
+<style>
+/* 一頁式會議紀錄工作台 */
+.meeting-page{max-width:1500px;margin:0 auto}
+.meeting-stickybar{
+  position:sticky;top:0;z-index:20;background:rgba(245,242,235,.96);
+  backdrop-filter:blur(8px);padding:10px 0 12px;border-bottom:1px solid var(--line)
+}
+.meeting-stickybar .topbar{margin-bottom:8px}
+.save-state{font-size:12px;color:var(--muted);margin-left:8px}
+.save-state.dirty{color:#9a6c18;font-weight:700}
+.save-state.saved{color:var(--forest);font-weight:700}
+.meeting-meta{
+  display:grid;grid-template-columns:2fr 1fr 1fr 1.5fr;gap:10px;
+  background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0
+}
+.meeting-meta .wide{grid-column:span 2}
+.meeting-meta label span,.record-field label span{
+  display:block;font-size:12px;font-weight:700;color:var(--deep);margin-bottom:5px
+}
+.meeting-meta input,.meeting-meta textarea,.meeting-meta select{width:100%}
+.meeting-meta textarea{min-height:44px}
+.meeting-quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.meeting-editor{display:grid;gap:12px}
+.meeting-row{
+  background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  box-shadow:0 5px 16px rgba(36,65,52,.06)
+}
+.meeting-row-head{
+  display:grid;grid-template-columns:180px minmax(260px,1fr) 120px 120px auto;
+  gap:8px;align-items:center;padding:10px 12px;background:#f8f5ef;border-bottom:1px solid var(--line)
+}
+.meeting-row-head input,.meeting-row-head select{width:100%}
+.meeting-row-body{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px}
+.record-field textarea{width:100%;min-height:150px;line-height:1.55}
+.action-panel{border-top:1px solid var(--line);background:#fbfdfb;padding:12px}
+.action-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.action-table{display:grid;gap:8px}
+.action-row{
+  display:grid;grid-template-columns:34px minmax(220px,1.6fr) 120px 120px 110px 90px 92px 42px;
+  gap:7px;align-items:center;padding:8px;background:#fff;border:1px solid var(--line);border-radius:11px
+}
+.action-row input,.action-row select{width:100%;min-width:0;padding:7px 8px}
+.sync-check{display:flex;align-items:center;justify-content:center}
+.sync-check input{width:auto}
+.action-task-badge{font-size:11px;color:var(--forest);font-weight:700}
+.meeting-row-footer{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 12px;
+  border-top:1px solid var(--line);background:#fff
+}
+.drag-handle{color:#999;cursor:grab;font-size:18px}
+.row-number{font-size:12px;color:var(--muted)}
+.meeting-overview{
+  display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));gap:10px;margin:10px 0
+}
+.meeting-overview > div{
+  background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px
+}
+.meeting-overview strong{display:block;font-size:23px;color:var(--deep)}
+.template-menu{display:flex;flex-wrap:wrap;gap:7px}
+.template-chip{
+  border:1px solid var(--sage);background:#fff;border-radius:999px;padding:7px 10px;
+  color:var(--deep);font-size:12px
+}
+.template-chip:hover{background:var(--mint)}
+@media(max-width:1050px){
+  .meeting-meta{grid-template-columns:1fr 1fr}
+  .meeting-row-head{grid-template-columns:150px 1fr 100px auto}
+  .meeting-row-head .meeting-owner{display:none}
+  .action-row{grid-template-columns:30px 1.5fr 100px 110px 80px 75px 42px}
+  .action-team{display:none}
+}
+@media(max-width:720px){
+  .meeting-meta,.meeting-row-body{grid-template-columns:1fr}
+  .meeting-meta .wide{grid-column:auto}
+  .meeting-row-head{grid-template-columns:1fr}
+  .meeting-row-head .meeting-owner{display:block}
+  .action-row{grid-template-columns:30px 1fr 42px}
+  .action-owner,.action-team,.action-due,.action-priority{grid-column:2}
+  .meeting-overview{grid-template-columns:1fr 1fr}
+}
+</style>
+
 </head>
 <body>
 
@@ -87,17 +170,64 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 </section>
 
 
+
 <section id="meeting" class="view">
-  <div class="topbar">
-    <div><h1>每週會議</h1><div class="muted">從大項開始記錄，決議可直接轉成甘特任務並即時同步給四位夥伴。</div></div>
-    <div class="meeting-toolbar"><button class="btn soft" onclick="loadAgendaTemplate()">載入常用大項</button><button class="btn primary" onclick="openMeetingDrawer()">＋新增討論項目</button></div>
+  <div class="meeting-page">
+    <div class="meeting-stickybar">
+      <div class="topbar">
+        <div>
+          <h1>一頁式會議紀錄</h1>
+          <div class="muted">邦妮可以一邊聽、一邊在同一頁持續補充各大項；會後一次儲存，需要執行的待辦可同步進甘特圖。</div>
+        </div>
+        <div>
+          <span id="meetingSaveState" class="save-state saved">已同步</span>
+          <button class="btn soft" onclick="addMeetingSection()">＋新增大項</button>
+          <button class="btn primary" onclick="saveWholeMeeting()">儲存全部並同步</button>
+        </div>
+      </div>
+
+      <div class="filters">
+        <label>選擇會議週 <input type="date" id="meetingWeek" onchange="changeMeetingWeek()"></label>
+        <button class="btn soft" onclick="addDefaultSections()">載入常用大項</button>
+        <button class="btn soft" onclick="refreshMeetingSafely()">重新載入</button>
+      </div>
+    </div>
+
+    <div class="meeting-meta">
+      <label class="wide"><span>會議主題</span><input id="meetingTitle" placeholder="例如：整體活動討論分享" oninput="markMeetingDirty()"></label>
+      <label><span>會議日期</span><input type="date" id="meetingDate" oninput="markMeetingDirty()"></label>
+      <label><span>會議時間</span><input type="time" id="meetingTime" oninput="markMeetingDirty()"></label>
+      <label class="wide"><span>會議地點／連結</span><input id="meetingLink" placeholder="Google Meet 或實體地點" oninput="markMeetingDirty()"></label>
+      <label class="wide"><span>與會人員</span><input id="meetingAttendees" placeholder="小花果（小美）、滴滴兒森（茂玲）、物物島（若曦）、邦妮" oninput="markMeetingDirty()"></label>
+      <label><span>紀錄人</span><input id="meetingRecorder" value="邦妮" oninput="markMeetingDirty()"></label>
+      <label><span>會議狀態</span><select id="meetingCompletion" oninput="markMeetingDirty()"><option value="">進行中</option><option value="completed">已完成</option></select></label>
+    </div>
+
+    <div class="meeting-overview">
+      <div><strong id="onePageSectionCount">0</strong><span class="muted">討論大項</span></div>
+      <div><strong id="onePageActionCount">0</strong><span class="muted">待辦事項</span></div>
+      <div><strong id="onePageSyncCount">0</strong><span class="muted">要同步甘特</span></div>
+      <div><strong id="onePageDeadlineCount">0</strong><span class="muted">已設定 Deadline</span></div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="section-head"><h3 style="margin:0">快速加入大項</h3><span class="muted">講到哪裡就先開哪一區，不必照順序。</span></div>
+      <div class="template-menu" id="meetingTemplateMenu"></div>
+    </div>
+
+    <div id="onePageMeetingEditor" class="meeting-editor"></div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="section-head"><h3 style="margin:0">會後摘要</h3><span class="muted">這三格會和整份會議一起同步。</span></div>
+      <div class="meeting-summary">
+        <div><h4>本次重要決策</h4><textarea id="meetingDecision" oninput="markMeetingDirty()"></textarea></div>
+        <div><h4>風險與需協調事項</h4><textarea id="meetingRisk" oninput="markMeetingDirty()"></textarea></div>
+        <div><h4>下次會議／臨時動議</h4><textarea id="meetingGoal" oninput="markMeetingDirty()"></textarea></div>
+      </div>
+    </div>
   </div>
-  <div class="filters"><label>會議週 <input type="date" id="meetingWeek" onchange="renderMeeting()"></label><button class="btn soft" onclick="renderMeeting()">重新整理</button></div>
-  <div class="meeting-kpis"><div class="meeting-kpi"><strong id="mkTopics">0</strong><span>本週討論項目</span></div><div class="meeting-kpi"><strong id="mkTasks">0</strong><span>已建立後續工作</span></div><div class="meeting-kpi"><strong id="mkOpen">0</strong><span>尚未完成</span></div><div class="meeting-kpi"><strong id="mkOverdue">0</strong><span>已逾期</span></div></div>
-  <div class="meeting-summary"><div class="card"><h3>本週會議目標</h3><textarea id="meetingGoal" onblur="saveMeetingSummary()"></textarea></div><div class="card"><h3>本週重要決策</h3><textarea id="meetingDecision" onblur="saveMeetingSummary()"></textarea></div><div class="card"><h3>風險與需協調事項</h3><textarea id="meetingRisk" onblur="saveMeetingSummary()"></textarea></div></div>
-  <div class="grid two" style="margin-top:14px"><div class="card"><h3>會前自動整理</h3><div id="autoMeeting"></div></div><div class="card"><h3>本週需追蹤</h3><div id="meetingFollowups" class="followup-board"></div></div></div>
-  <div class="card" style="margin-top:14px"><div class="topbar" style="margin-bottom:8px"><h3 style="margin:0">大項討論紀錄</h3><span class="muted">依企業合作、劇本、食育、菜單、視覺、行銷、行政等分類。</span></div><div id="meetingRecords"></div></div>
 </section>
+
 
 
 <section id="pm" class="view">
@@ -135,31 +265,15 @@ main{padding:24px 28px 60px;min-width:0}.view{display:none}.view.active{display:
 </aside>
 
 
-<aside id="meetingDrawer" class="drawer">
-  <div class="drawer-head"><h2 id="meetingDrawerTitle">新增會議討論項目</h2><button class="btn soft" onclick="closeDrawers()">關閉</button></div>
-  <div class="form-grid">
-    <input type="hidden" id="mDbId"><input type="hidden" id="mLinkedTaskId">
-    <label><span>會議週</span><input type="date" id="mWeek"></label>
-    <label><span>大項</span><select id="mCategory"><option>企業合作</option><option>劇本與演出</option><option>食育活動</option><option>辦桌菜單</option><option>品牌視覺</option><option>行銷與售票</option><option>場地與設備</option><option>行政與法規</option><option>財務與補助</option><option>現場執行</option><option>專案管理</option><option>其他</option></select></label>
-    <label class="full"><span>討論主題</span><input id="mTopic" placeholder="例如：LINE Pay 贊助提案修改方向"></label>
-    <label class="full"><span>討論內容</span><textarea id="mContent" placeholder="記錄背景、目前進度、問題與討論內容"></textarea></label>
-    <label class="full"><span>會議決議</span><textarea id="mDecision" placeholder="寫下最後決定、下一步與需要確認的事項"></textarea></label>
-    <label><span>議題負責人</span><input id="mOwner" placeholder="邦妮／maomao／小花果／物物島"></label>
-    <label><span>議題狀態</span><select id="mStatus"><option>待討論</option><option>已決議</option><option>追蹤中</option><option>已結案</option></select></label>
-    <label class="full"><input type="checkbox" id="mCreateTask" onchange="toggleMeetingTaskFields()"> 將此決議建立為甘特任務</label>
-    <div id="meetingTaskFields" class="full form-grid hidden">
-      <label class="full"><span>甘特任務名稱</span><input id="mTaskName"></label><label><span>工作負責人</span><input id="mTaskOwner"></label><label><span>所屬團隊</span><select id="mTaskTeam"><option>滴滴兒森</option><option>小花果玩戲場</option><option>物物島</option><option>專案管理</option><option>三方共同</option></select></label><label><span>開始日期</span><input type="date" id="mTaskStart"></label><label><span>Deadline</span><input type="date" id="mTaskEnd"></label><label><span>優先順序</span><select id="mTaskPriority"><option>高</option><option selected>中</option><option>低</option></select></label>
-    </div>
-  </div>
-  <div class="drawer-actions"><button id="meetingDeleteBtn" class="btn danger hidden" onclick="deleteMeeting()">刪除紀錄</button><button class="btn primary" onclick="saveMeeting()">儲存並同步</button></div>
-</aside>
+
 
 
 <div id="toast" class="toast">已儲存</div>
 
 <script>
 let sb, currentUser, currentProfile;
-let tasks=[], meetings=[], summaries=[];
+let tasks=[], meetings=[], summaries=[], meetingActions=[];
+let meetingDirty=false, removedMeetingIds=[], removedActionIds=[];
 
 const activityDate=new Date('2027-02-27T00:00:00');
 const $=id=>document.getElementById(id);
@@ -200,19 +314,25 @@ async function enterApp(user){
 }
 
 async function loadAll(){
-  const [{data:t},{data:m},{data:s}]=await Promise.all([
+  const [{data:t},{data:m},{data:s},{data:a}]=await Promise.all([
     sb.from('tasks').select('*').order('due_date',{ascending:true}),
-    sb.from('meetings').select('*').order('week_start',{ascending:false}),
-    sb.from('meeting_summaries').select('*')
+    sb.from('meetings').select('*').order('week_start',{ascending:false}).order('sort_order',{ascending:true}),
+    sb.from('meeting_summaries').select('*'),
+    sb.from('meeting_action_items').select('*').order('created_at',{ascending:true})
   ]);
-  tasks=t||[];meetings=m||[];summaries=s||[];
+  tasks=t||[];meetings=m||[];summaries=s||[];meetingActions=a||[];
   fillPersona();renderAll();
+}
+function handleRealtimeUpdate(){
+  if(meetingDirty){$('meetingSaveState').textContent='有其他人更新，請先儲存';$('meetingSaveState').className='save-state dirty';return;}
+  loadAll();
 }
 function subscribeRealtime(){
   sb.channel('project-hub')
-    .on('postgres_changes',{event:'*',schema:'public',table:'tasks'},loadAll)
-    .on('postgres_changes',{event:'*',schema:'public',table:'meetings'},loadAll)
-    .on('postgres_changes',{event:'*',schema:'public',table:'meeting_summaries'},loadAll)
+    .on('postgres_changes',{event:'*',schema:'public',table:'tasks'},handleRealtimeUpdate)
+    .on('postgres_changes',{event:'*',schema:'public',table:'meetings'},handleRealtimeUpdate)
+    .on('postgres_changes',{event:'*',schema:'public',table:'meeting_summaries'},handleRealtimeUpdate)
+    .on('postgres_changes',{event:'*',schema:'public',table:'meeting_action_items'},handleRealtimeUpdate)
     .subscribe();
 }
 
@@ -256,15 +376,282 @@ function renderTimeline(){
   $('timelineBody').innerHTML=list.map(t=>{const s=dateObj(t.start_date),e=dateObj(t.due_date);return `<tr><td class="task"><button class="task-link" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button><div class="muted">${esc(t.team)}｜${esc(t.status)}</div></td><td class="owner">${esc(t.owner_name)}</td>`+weeks.map(w=>{const we=new Date(w);we.setDate(we.getDate()+6);return `<td class="week">${s&&e&&w<=e&&we>=s?`<div class="bar ${statusClass(t.status)}"></div>`:''}</td>`}).join('')+'</tr>'}).join('');
 }
 
-const MEETING_CATEGORIES=['企業合作','劇本與演出','食育活動','辦桌菜單','品牌視覺','行銷與售票','場地與設備','行政與法規','財務與補助','現場執行','專案管理','其他'];
-function packMeetingDetails(content,decision){return JSON.stringify({content:content||'',decision:decision||''})}
-function unpackMeetingDetails(raw){if(!raw)return{content:'',decision:''};try{const o=JSON.parse(raw);if(o&&typeof o==='object')return{content:o.content||'',decision:o.decision||''}}catch(e){}return{content:'',decision:String(raw||'')}}
-function loadAgendaTemplate(){const week=$('meetingWeek').value||monday();const existing=meetings.filter(m=>m.week_start===week).map(m=>m.type);const missing=MEETING_CATEGORIES.filter(c=>!existing.includes(c)&&c!=='其他');if(!missing.length){toast('本週常用大項都已建立');return}const box=document.createElement('div');box.className='agenda-template';box.innerHTML=missing.map(c=>`<div class="agenda-item"><b>${esc(c)}</b><button class="btn soft" onclick="openMeetingDrawer('', '${esc(c)}')">新增討論</button></div>`).join('');$('meetingRecords').prepend(box);toast('已載入常用大項')}
-function toggleMeetingTaskFields(){$('meetingTaskFields').classList.toggle('hidden',!$('mCreateTask').checked)}
-function openMeetingDrawer(id='',presetCategory=''){const m=id?meetings.find(x=>x.id===id):null;const linked=m?.linked_task_id?tasks.find(t=>t.id===m.linked_task_id):null;const detail=unpackMeetingDetails(m?.decision);$('meetingDrawerTitle').textContent=m?'編輯會議討論項目':'新增會議討論項目';$('mDbId').value=m?.id||'';$('mLinkedTaskId').value=m?.linked_task_id||'';$('mWeek').value=m?.week_start||$('meetingWeek').value||monday();$('mCategory').value=m?.type||presetCategory||'企業合作';$('mTopic').value=m?.topic||'';$('mContent').value=detail.content||'';$('mDecision').value=detail.decision||'';$('mOwner').value=m?.owner_name||'';$('mStatus').value=m?.status||'待討論';$('mCreateTask').checked=!!linked;toggleMeetingTaskFields();$('mTaskName').value=linked?.title||'';$('mTaskOwner').value=linked?.owner_name||m?.owner_name||'';$('mTaskTeam').value=linked?.team||'三方共同';$('mTaskStart').value=fmt(linked?.start_date)||new Date().toISOString().slice(0,10);$('mTaskEnd').value=fmt(linked?.due_date)||'';$('mTaskPriority').value=linked?.priority||'中';$('meetingDeleteBtn').classList.toggle('hidden',!m);openDrawer('meetingDrawer')}
-async function saveMeeting(){if(!$('mTopic').value.trim())return alert('請填寫討論主題。');const meetingId=$('mDbId').value;let linkedTaskId=$('mLinkedTaskId').value||null;if($('mCreateTask').checked){if(!$('mTaskName').value.trim()||!$('mTaskOwner').value.trim()||!$('mTaskEnd').value)return alert('請填寫甘特任務名稱、負責人與 Deadline。');const tp={team:$('mTaskTeam').value,category:'會議決議',subcategory:$('mCategory').value,title:$('mTaskName').value.trim(),owner_name:$('mTaskOwner').value.trim(),start_date:$('mTaskStart').value||null,due_date:$('mTaskEnd').value||null,priority:$('mTaskPriority').value,status:'未開始',progress:0,notes:'由會議決議建立：'+$('mTopic').value.trim(),updated_by:currentUser.id};if(linkedTaskId){const r=await sb.from('tasks').update(tp).eq('id',linkedTaskId);if(r.error)return alert(r.error.message)}else{tp.code=nextCode(tp.team);tp.created_by=currentUser.id;const r=await sb.from('tasks').insert(tp).select().single();if(r.error)return alert(r.error.message);linkedTaskId=r.data.id}}const payload={week_start:$('mWeek').value,type:$('mCategory').value,topic:$('mTopic').value.trim(),decision:packMeetingDetails($('mContent').value,$('mDecision').value),owner_name:$('mOwner').value.trim(),status:$('mStatus').value,linked_task_id:linkedTaskId,updated_by:currentUser.id};let r;if(meetingId)r=await sb.from('meetings').update(payload).eq('id',meetingId);else{payload.created_by=currentUser.id;r=await sb.from('meetings').insert(payload)}if(r.error)return alert(r.error.message);closeDrawers();toast(linkedTaskId?'會議紀錄與甘特任務已同步':'會議紀錄已同步')}
-async function deleteMeeting(){const id=$('mDbId').value;if(!id||!confirm('確定刪除這筆會議紀錄？'))return;const r=await sb.from('meetings').delete().eq('id',id);if(r.error)return alert(r.error.message);closeDrawers();toast('會議紀錄已刪除')}
-function renderMeeting(){const week=$('meetingWeek').value||monday();$('meetingWeek').value=week;const summary=summaries.find(x=>x.week_start===week)||{};$('meetingGoal').value=summary.goal||'';$('meetingDecision').value=summary.important_decisions||'';$('meetingRisk').value=summary.risks||'';const start=dateObj(week),end=new Date(start);end.setDate(end.getDate()+6);const overdue=tasks.filter(t=>t.status!=='已完成'&&dateObj(t.due_date)<start);const due=tasks.filter(t=>t.status!=='已完成'&&dateObj(t.due_date)>=start&&dateObj(t.due_date)<=end);const pending=tasks.filter(t=>t.status==='待確認');$('autoMeeting').innerHTML=[['延遲未完成',overdue,'overdue'],['本週截止',due,''],['需要決策',pending,'high']].map(([n,a,c])=>`<h4>${n}（${a.length}）</h4>${a.slice(0,8).map(t=>`<div class="focus ${c}"><button class="task-link" onclick="openTaskDrawer('${t.id}')"><b>${esc(t.title)}</b></button><div class="muted">${esc(t.owner_name)}｜${fmt(t.due_date)}</div></div>`).join('')||'<div class="muted">無</div>'}`).join('');const records=meetings.filter(m=>m.week_start===week);const linked=records.map(m=>m.linked_task_id?tasks.find(t=>t.id===m.linked_task_id):null).filter(Boolean);const now=new Date();now.setHours(0,0,0,0);const open=linked.filter(t=>t.status!=='已完成');const over=open.filter(t=>dateObj(t.due_date)<now);$('mkTopics').textContent=records.length;$('mkTasks').textContent=linked.length;$('mkOpen').textContent=open.length;$('mkOverdue').textContent=over.length;$('meetingFollowups').innerHTML=open.length?open.sort((a,b)=>dateObj(a.due_date)-dateObj(b.due_date)).map(t=>`<div class="followup-item ${dateObj(t.due_date)<now?'overdue':''}"><div class="row"><b>${esc(t.title)}</b><span>${fmt(t.due_date)}</span></div><div class="muted">${esc(t.owner_name)}｜${esc(t.status)}</div><div class="progress"><i style="width:${Number(t.progress||0)}%"></i></div><button class="btn soft" style="margin-top:8px" onclick="openTaskDrawer('${t.id}')">查看工作</button></div>`).join(''):'<div class="empty">本週沒有待追蹤工作</div>';const grouped={};records.forEach(m=>(grouped[m.type]||(grouped[m.type]=[])).push(m));$('meetingRecords').innerHTML=Object.keys(grouped).length?Object.entries(grouped).map(([cat,items])=>`<div style="margin:18px 0"><div class="topbar" style="margin-bottom:8px"><h3 style="margin:0">${esc(cat)}</h3><button class="btn soft" onclick="openMeetingDrawer('', '${esc(cat)}')">＋新增此大項討論</button></div>${items.map(m=>{const detail=unpackMeetingDetails(m.decision);const task=m.linked_task_id?tasks.find(t=>t.id===m.linked_task_id):null;return `<div class="meeting-record"><span class="meeting-category">${esc(cat)}</span><h4 style="margin:0">${esc(m.topic)}</h4><div class="muted">${esc(m.owner_name||'未指定')}｜${esc(m.status)}</div>${detail.content?`<div class="meeting-content"><b>討論內容</b><br>${esc(detail.content)}</div>`:''}${detail.decision?`<div class="meeting-decision"><b>會議決議</b><br>${esc(detail.decision)}</div>`:''}${task?`<div class="linked-task"><b>已同步甘特任務：</b>${esc(task.title)}<div class="muted">${esc(task.owner_name)}｜Deadline ${fmt(task.due_date)}｜${esc(task.status)}</div><div class="progress"><i style="width:${Number(task.progress||0)}%"></i></div></div>`:''}<div class="meeting-actions"><button class="btn soft" onclick="openMeetingDrawer('${m.id}')">編輯紀錄</button>${task?`<button class="btn soft" onclick="openTaskDrawer('${task.id}')">查看甘特任務</button>`:''}</div></div>`}).join('')}</div>`).join(''):'<div class="empty">尚未新增本週討論紀錄</div>'}
+
+const MEETING_CATEGORIES=[
+  '活動介紹','製作期程','場地相關','票務相關','活動相關','製作相關',
+  '行銷相關','企業贊助','演出內容','行政與法規','財務與補助','臨時動議','其他'
+];
+
+function markMeetingDirty(){
+  meetingDirty=true;
+  const el=$('meetingSaveState');
+  if(el){el.textContent='尚未儲存';el.className='save-state dirty';}
+  updateOnePageCounts();
+}
+function markMeetingSaved(){
+  meetingDirty=false;removedMeetingIds=[];removedActionIds=[];
+  const el=$('meetingSaveState');
+  if(el){el.textContent='已同步';el.className='save-state saved';}
+}
+function changeMeetingWeek(){
+  if(meetingDirty && !confirm('目前有尚未儲存的內容，確定切換會議週？')) return;
+  meetingDirty=false;removedMeetingIds=[];removedActionIds=[];
+  renderMeeting();
+}
+function refreshMeetingSafely(){
+  if(meetingDirty && !confirm('重新載入會捨棄尚未儲存的內容，確定嗎？')) return;
+  meetingDirty=false;loadAll();
+}
+function defaultMeetingDate(week){
+  return week||new Date().toISOString().slice(0,10);
+}
+function detailFromMeeting(m){
+  if(m.discussion_content!==undefined && m.discussion_content!==null){
+    return {content:m.discussion_content||'',decision:m.decision||''};
+  }
+  if(!m.decision)return {content:'',decision:''};
+  try{
+    const o=JSON.parse(m.decision);
+    return {content:o.content||'',decision:o.decision||''};
+  }catch(e){return {content:'',decision:m.decision||''}}
+}
+function addDefaultSections(){
+  const existing=[...document.querySelectorAll('.meeting-row')].map(r=>r.querySelector('.section-category').value);
+  MEETING_CATEGORIES.filter(x=>x!=='其他'&&!existing.includes(x)).forEach(x=>addMeetingSection(x));
+  markMeetingDirty();
+}
+function buildTemplateMenu(){
+  const box=$('meetingTemplateMenu');
+  if(!box)return;
+  box.innerHTML=MEETING_CATEGORIES.map(c=>`<button class="template-chip" onclick="addMeetingSection('${esc(c)}')">${esc(c)}</button>`).join('');
+}
+function actionRowHtml(action={}){
+  const task=action.linked_task_id?tasks.find(t=>t.id===action.linked_task_id):null;
+  return `<div class="action-row" data-action-id="${action.id||''}" data-task-id="${action.linked_task_id||''}">
+    <label class="sync-check" title="勾選後同步進甘特圖"><input type="checkbox" class="action-sync" ${action.sync_to_gantt||action.linked_task_id?'checked':''} onchange="markMeetingDirty()"></label>
+    <input class="action-title" value="${esc(action.title||'')}" placeholder="待辦事項／工作內容" oninput="markMeetingDirty()">
+    <input class="action-owner" value="${esc(action.owner_name||'')}" placeholder="負責人" oninput="markMeetingDirty()">
+    <select class="action-team" onchange="markMeetingDirty()">
+      ${['滴滴兒森','小花果玩戲場','物物島','專案管理','三方共同'].map(v=>`<option ${action.team===v?'selected':''}>${v}</option>`).join('')}
+    </select>
+    <input type="date" class="action-due" value="${fmt(action.due_date)}" onchange="markMeetingDirty()">
+    <select class="action-priority" onchange="markMeetingDirty()">
+      ${['高','中','低'].map(v=>`<option ${action.priority===v?'selected':''}>${v}</option>`).join('')}
+    </select>
+    <div class="action-task-badge">${task?'已進甘特':''}</div>
+    <button class="btn danger" title="刪除待辦" onclick="removeActionRow(this)">×</button>
+  </div>`;
+}
+function meetingRowHtml(m={},index=0){
+  const detail=detailFromMeeting(m);
+  const actions=meetingActions.filter(a=>a.meeting_id===m.id);
+  return `<div class="meeting-row" data-meeting-id="${m.id||''}">
+    <div class="meeting-row-head">
+      <select class="section-category" onchange="markMeetingDirty()">
+        ${MEETING_CATEGORIES.map(v=>`<option ${m.type===v?'selected':''}>${v}</option>`).join('')}
+      </select>
+      <input class="section-topic" value="${esc(m.topic||'')}" placeholder="討論主題，例如：LINE Pay 合作方式" oninput="markMeetingDirty()">
+      <input class="meeting-owner" value="${esc(m.owner_name||'')}" placeholder="議題負責人" oninput="markMeetingDirty()">
+      <select class="section-status" onchange="markMeetingDirty()">
+        ${['待討論','已決議','追蹤中','已結案'].map(v=>`<option ${m.status===v?'selected':''}>${v}</option>`).join('')}
+      </select>
+      <button class="btn danger" onclick="removeMeetingSection(this)">刪除大項</button>
+    </div>
+    <div class="meeting-row-body">
+      <div class="record-field"><label><span>討論內容</span><textarea class="section-content" placeholder="邦妮可持續記錄討論內容、背景、不同人的意見與補充…" oninput="markMeetingDirty()">${esc(detail.content)}</textarea></label></div>
+      <div class="record-field"><label><span>決議／結論</span><textarea class="section-decision" placeholder="最後決定了什麼？哪些內容仍待確認？" oninput="markMeetingDirty()">${esc(detail.decision)}</textarea></label></div>
+    </div>
+    <div class="action-panel">
+      <div class="action-panel-head">
+        <div><b>待辦事項</b><div class="muted">勾選最左側方框，即代表儲存時要同步成甘特任務。</div></div>
+        <button class="btn soft" onclick="addActionRow(this)">＋新增待辦</button>
+      </div>
+      <div class="action-table">${actions.map(actionRowHtml).join('')}</div>
+    </div>
+    <div class="meeting-row-footer">
+      <span class="row-number">討論項目 ${index+1}</span>
+      <span class="muted">${m.updated_at?'最後同步：'+new Date(m.updated_at).toLocaleString('zh-TW'):''}</span>
+    </div>
+  </div>`;
+}
+function addMeetingSection(category='其他'){
+  const editor=$('onePageMeetingEditor');
+  const shell=document.createElement('div');
+  shell.innerHTML=meetingRowHtml({type:category,status:'待討論'},editor.children.length);
+  editor.appendChild(shell.firstElementChild);
+  markMeetingDirty();
+  setTimeout(()=>editor.lastElementChild.querySelector('.section-topic').focus(),30);
+}
+function removeMeetingSection(btn){
+  const row=btn.closest('.meeting-row');
+  const id=row.dataset.meetingId;
+  if(id)removedMeetingIds.push(id);
+  row.querySelectorAll('.action-row').forEach(a=>{if(a.dataset.actionId)removedActionIds.push(a.dataset.actionId)});
+  row.remove();renumberMeetingRows();markMeetingDirty();
+}
+function addActionRow(btn){
+  const table=btn.closest('.action-panel').querySelector('.action-table');
+  const div=document.createElement('div');
+  div.innerHTML=actionRowHtml({team:'三方共同',priority:'中'});
+  table.appendChild(div.firstElementChild);
+  markMeetingDirty();
+  table.lastElementChild.querySelector('.action-title').focus();
+}
+function removeActionRow(btn){
+  const row=btn.closest('.action-row');
+  if(row.dataset.actionId)removedActionIds.push(row.dataset.actionId);
+  row.remove();markMeetingDirty();
+}
+function renumberMeetingRows(){
+  document.querySelectorAll('.meeting-row').forEach((r,i)=>r.querySelector('.row-number').textContent='討論項目 '+(i+1));
+}
+function updateOnePageCounts(){
+  const sections=[...document.querySelectorAll('.meeting-row')];
+  const actions=[...document.querySelectorAll('.action-row')];
+  $('onePageSectionCount').textContent=sections.length;
+  $('onePageActionCount').textContent=actions.filter(a=>a.querySelector('.action-title').value.trim()).length;
+  $('onePageSyncCount').textContent=actions.filter(a=>a.querySelector('.action-sync').checked).length;
+  $('onePageDeadlineCount').textContent=actions.filter(a=>a.querySelector('.action-due').value).length;
+}
+function loadMeetingMeta(summary,week){
+  $('meetingTitle').value=summary?.meeting_title||'';
+  $('meetingDate').value=fmt(summary?.meeting_date)||defaultMeetingDate(week);
+  $('meetingTime').value=summary?.meeting_time||'';
+  $('meetingLink').value=summary?.meeting_link||'';
+  $('meetingAttendees').value=summary?.attendees||'';
+  $('meetingRecorder').value=summary?.recorder||'邦妮';
+  $('meetingCompletion').value=summary?.completed_at?'completed':'';
+  $('meetingDecision').value=summary?.important_decisions||'';
+  $('meetingRisk').value=summary?.risks||'';
+  $('meetingGoal').value=summary?.goal||'';
+}
+function renderMeeting(){
+  const week=$('meetingWeek').value||monday();
+  $('meetingWeek').value=week;
+  buildTemplateMenu();
+  const summary=summaries.find(x=>x.week_start===week)||null;
+  loadMeetingMeta(summary,week);
+  const records=meetings.filter(m=>m.week_start===week).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  $('onePageMeetingEditor').innerHTML=records.map(meetingRowHtml).join('');
+  if(!records.length)addMeetingSection('活動介紹');
+  renumberMeetingRows();updateOnePageCounts();markMeetingSaved();
+}
+async function saveActionItem(actionEl,meetingId){
+  const id=actionEl.dataset.actionId||null;
+  let linkedTaskId=actionEl.dataset.taskId||null;
+  const title=actionEl.querySelector('.action-title').value.trim();
+  if(!title)return;
+  const owner=actionEl.querySelector('.action-owner').value.trim();
+  const team=actionEl.querySelector('.action-team').value;
+  const due=actionEl.querySelector('.action-due').value||null;
+  const priority=actionEl.querySelector('.action-priority').value;
+  const sync=actionEl.querySelector('.action-sync').checked;
+
+  if(sync){
+    if(!owner||!due)throw new Error(`待辦「${title}」要同步甘特圖，請填寫負責人與 Deadline。`);
+    const taskPayload={
+      team,category:'會議決議',subcategory:actionEl.closest('.meeting-row').querySelector('.section-category').value,
+      title,owner_name:owner,start_date:$('meetingDate').value||new Date().toISOString().slice(0,10),
+      due_date:due,priority,status:'未開始',progress:0,
+      notes:'由一頁式會議紀錄建立',updated_by:currentUser.id
+    };
+    if(linkedTaskId){
+      const r=await sb.from('tasks').update(taskPayload).eq('id',linkedTaskId);
+      if(r.error)throw r.error;
+    }else{
+      taskPayload.code=nextCode(team);taskPayload.created_by=currentUser.id;
+      const r=await sb.from('tasks').insert(taskPayload).select().single();
+      if(r.error)throw r.error;
+      linkedTaskId=r.data.id;
+    }
+  }
+
+  const payload={
+    meeting_id:meetingId,title,owner_name:owner,team,due_date:due,priority,
+    sync_to_gantt:sync,linked_task_id:sync?linkedTaskId:null,
+    updated_by:currentUser.id
+  };
+  let r;
+  if(id)r=await sb.from('meeting_action_items').update(payload).eq('id',id);
+  else{payload.created_by=currentUser.id;r=await sb.from('meeting_action_items').insert(payload)}
+  if(r.error)throw r.error;
+}
+async function saveWholeMeeting(){
+  const rows=[...document.querySelectorAll('.meeting-row')];
+  if(!rows.length)return alert('請至少新增一個討論大項。');
+  $('meetingSaveState').textContent='同步中…';
+  try{
+    const week=$('meetingWeek').value||monday();
+    const summaryPayload={
+      week_start:week,
+      meeting_title:$('meetingTitle').value.trim(),
+      meeting_date:$('meetingDate').value||null,
+      meeting_time:$('meetingTime').value||null,
+      meeting_link:$('meetingLink').value.trim(),
+      attendees:$('meetingAttendees').value.trim(),
+      recorder:$('meetingRecorder').value.trim(),
+      completed_at:$('meetingCompletion').value==='completed'?new Date().toISOString():null,
+      goal:$('meetingGoal').value,
+      important_decisions:$('meetingDecision').value,
+      risks:$('meetingRisk').value,
+      updated_by:currentUser.id
+    };
+    const sr=await sb.from('meeting_summaries').upsert(summaryPayload,{onConflict:'week_start'});
+    if(sr.error)throw sr.error;
+
+    for(let i=0;i<rows.length;i++){
+      const row=rows[i];
+      const topic=row.querySelector('.section-topic').value.trim();
+      const content=row.querySelector('.section-content').value;
+      const decision=row.querySelector('.section-decision').value;
+      const hasAction=[...row.querySelectorAll('.action-title')].some(x=>x.value.trim());
+      if(!topic&&!content&&!decision&&!hasAction)continue;
+
+      const meetingPayload={
+        week_start:week,type:row.querySelector('.section-category').value,
+        topic:topic||'未命名討論項目',discussion_content:content,decision,
+        owner_name:row.querySelector('.meeting-owner').value.trim(),
+        status:row.querySelector('.section-status').value,sort_order:i,
+        updated_by:currentUser.id
+      };
+      let meetingId=row.dataset.meetingId;
+      let mr;
+      if(meetingId){
+        mr=await sb.from('meetings').update(meetingPayload).eq('id',meetingId).select().single();
+      }else{
+        meetingPayload.created_by=currentUser.id;
+        mr=await sb.from('meetings').insert(meetingPayload).select().single();
+      }
+      if(mr.error)throw mr.error;
+      meetingId=mr.data.id;
+      row.dataset.meetingId=meetingId;
+
+      for(const actionEl of row.querySelectorAll('.action-row')){
+        await saveActionItem(actionEl,meetingId);
+      }
+    }
+
+    if(removedActionIds.length){
+      const r=await sb.from('meeting_action_items').delete().in('id',removedActionIds);
+      if(r.error)throw r.error;
+    }
+    if(removedMeetingIds.length){
+      const r=await sb.from('meetings').delete().in('id',removedMeetingIds);
+      if(r.error)throw r.error;
+    }
+
+    markMeetingSaved();
+    toast('整份會議紀錄與甘特任務已同步');
+    await loadAll();
+  }catch(err){
+    $('meetingSaveState').textContent='同步失敗';
+    $('meetingSaveState').className='save-state dirty';
+    alert(err.message||String(err));
+  }
+}
+window.addEventListener('beforeunload',e=>{
+  if(meetingDirty){e.preventDefault();e.returnValue='';}
+});
 
 function renderPM(){
   const now=new Date();now.setHours(0,0,0,0);const in7=new Date(now);in7.setDate(now.getDate()+7);const open=tasks.filter(t=>t.status!=='已完成');
